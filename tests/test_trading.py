@@ -116,3 +116,16 @@ def test_write_auth_and_export_boundary(client):
     assert client.post('/api/paper/advance',json={'expected_cursor':60}).status_code==401
     package=client.get('/api/export').json()
     assert not any('paper' in k or 'order' in k for k in package)
+
+
+def test_cost_basis_uses_fill_chronology_not_submission_order():
+    # An earlier-submitted buy limit fills after a newer market buy and sale.
+    # Its cost must not affect the earlier realized sale.
+    orders=[
+        PaperOrder(id=1,instrument='AA',side='buy',quantity=10,fill_cents=800,status='filled',session_index=62),
+        PaperOrder(id=2,instrument='AA',side='buy',quantity=10,fill_cents=1000,status='filled',session_index=60),
+        PaperOrder(id=3,instrument='AA',side='sell',quantity=10,fill_cents=1100,status='filled',session_index=61),
+    ]
+    positions,realized=portfolio(orders)
+    assert realized==1000
+    assert positions['AA']=={'quantity':10,'cost_cents':8000}

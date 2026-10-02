@@ -63,7 +63,7 @@ def order_rows(s): return list(s.scalars(select(PaperOrder).order_by(PaperOrder.
 
 def portfolio(orders):
     positions={};realized=0
-    for o in orders:
+    for o in sorted(orders, key=lambda row: (row.session_index, row.id)):
         if o.status not in ('filled','settled'): continue
         p=positions.setdefault(o.instrument,{'quantity':0,'cost_cents':0})
         amount=o.fill_cents*o.quantity*instruments()[o.instrument]['multiplier']
