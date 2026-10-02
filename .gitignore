@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.so
+*.dylib
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.env
+data/
+*.db
+*.db-*
+playwright-report/
