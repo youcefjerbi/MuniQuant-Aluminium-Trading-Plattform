@@ -31,4 +31,4 @@ The architecture document contains the twelve-week owner-based plan. This list d
 | P2 | Contract v1 | Consumer review, compatibility fixtures and version policy agreed before freeze |
 | P2 | Broader pilot | 50–100 verified facilities, 5–10 source families, ownership and operating-status history |
 
-No live trading, price forecasting, or order execution is included in this project scope.
+Simulated stock/options orders and charting are now implemented as a user-requested scope extension; see PAPER_TRADING.md. Live trading, price forecasting, and broker execution remain excluded.

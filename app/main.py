@@ -182,6 +182,9 @@ def create_app(database_url=None, storage=None, write_token=None):
         validate(package,json.loads((Path(__file__).parent/'package.schema.json').read_text()))
         return JSONResponse(package,headers={'Content-Disposition':'attachment; filename="commodity-evidence-package.json"'})
 
+    from .trading import register_routes
+    register_routes(app,session,writer)
+
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     @app.get('/',include_in_schema=False)
     def index(): return FileResponse(STATIC/'index.html')

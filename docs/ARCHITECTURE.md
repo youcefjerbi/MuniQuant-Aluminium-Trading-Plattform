@@ -172,3 +172,7 @@ The original plan assumes two engineers and a PM, approximately 10 hours each pe
 - [pybind11 first steps](https://pybind11.readthedocs.io/en/stable/basics.html)
 
 These references support the implementation techniques. The architecture choices and trade-offs above are project decisions.
+
+## 10. Scope extension — 3 October 2026
+
+The user explicitly requested stock charts plus both options contracts and simulated buy/sell trading. An isolated paper-trading module now extends the original data-only scope. This supersedes the earlier exclusion only for simulated trading. The evidence export boundary remains unchanged. See [paper-trading architecture and rules](PAPER_TRADING.md).

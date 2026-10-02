@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import Column, String, Integer, Float, Text, ForeignKey, JSON, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Integer, BigInteger, Float, Text, ForeignKey, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -129,3 +129,29 @@ class Audit(Base):
     action = Column(String, nullable=False)
     record_id = Column(String, nullable=False)
     detail = Column(JSON, nullable=False)
+
+class PaperAccount(Base):
+    __tablename__ = 'paper_accounts'
+    id = Column(String, primary_key=True)
+    cash_cents = Column(BigInteger, nullable=False)
+    cursor = Column(Integer, nullable=False)
+    version = Column(Integer, nullable=False)
+    __table_args__ = (CheckConstraint('cash_cents >= 0'), CheckConstraint('cursor >= 0 AND cursor < 120'))
+
+class PaperOrder(Base):
+    __tablename__ = 'paper_orders'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_id = Column(String, nullable=False, unique=True)
+    instrument = Column(String, nullable=False)
+    side = Column(String, nullable=False)
+    order_type = Column(String, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    limit_cents = Column(Integer)
+    fill_cents = Column(Integer)
+    status = Column(String, nullable=False)
+    created_at = Column(String, nullable=False, default=now)
+    filled_at = Column(String)
+    session_index = Column(Integer, nullable=False)
+    actor = Column(String, nullable=False)
+    __table_args__ = (CheckConstraint('quantity > 0'),CheckConstraint("side IN ('buy','sell')"),
+                     CheckConstraint("status IN ('open','filled','cancelled','expired','settled')"))

@@ -4,6 +4,10 @@ An evidence-first industrial and market-data workspace built with **Python, C++1
 
 Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operational instructions are in [the runbook](docs/RUNBOOK.md).
 
+## Charts and paper trading
+
+Open **Charts & trading** for candlestick/line charts, volume, simulated stock orders, calls and puts, limits, positions and P/L. Start with $100,000 of paper cash and advance the synthetic replay one session at a time. See [paper-trading rules](docs/PAPER_TRADING.md). Prices are fictional and there is no real-money execution.
+
 ## Working features
 
 - Industrial asset and company register, aliases, sourced ownership/operator relationships.
