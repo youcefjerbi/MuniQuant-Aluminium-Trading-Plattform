@@ -11,12 +11,13 @@ Open **Charts & trading** for candlestick/line charts, volume, simulated stock o
 ## Working features
 
 - Industrial asset and company register, aliases, sourced ownership/operator relationships.
-- Historical capacity and operating-status observations, explicit units and C++ normalization.
+- Historical capacity and operating-status observations, preserved reported units and dimension-checked normalization.
 - Distinct market instruments, futures contracts, prompt dates, price types, source currencies and provenance.
 - Source registry, exact UTF-8 evidence snapshots, SHA-256 integrity checks and document versions.
-- Atomic capacity CSV import; deterministic matching and an audited human-review queue.
-- Machine-readable validation, quality warnings, acquisition manifests.
-- Schema-validated JSON export and frozen evidence bundles with verified restore.
+- Source-governance records, explicit acquisition methods and structured retrieval-attempt history.
+- Atomic capacity CSV import; deterministic normalized/alias/fuzzy matching with recorded candidate evidence and an audited human-review queue.
+- Deterministic unit aliases, machine-readable versioned quality runs, observation trace views and acquisition manifests.
+- Backward-compatible schema-validated JSON export, observation-oriented CEP v1 JSONL export, and frozen evidence bundles with verified restore.
 - Browser screens for overview, assets, markets, evidence, resolution, and quality.
 - Alembic migrations, automated tests, PostgreSQL CI and Docker configuration.
 
@@ -87,5 +88,9 @@ docs/               Architecture, decisions, backlog and operations
 4. Register a permitted source, capture its content, and add a sourced observation.
 5. Try a facility alias under Resolution & review.
 6. Export a package from Data quality and verify its source/document references.
+
+The Data quality screen can also run the versioned ruleset and download the
+observation-oriented Commodity Evidence Package v1 JSONL contract. Existing draft
+JSON exports remain unchanged for current consumers.
 
 Keep the service local until individual authentication and read authorization are implemented. No license for redistribution of third-party source data is implied by this repository.

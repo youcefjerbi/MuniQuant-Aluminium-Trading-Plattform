@@ -17,6 +17,7 @@ class Entity(Base):
     region = Column(String)
     commodity = Column(String, nullable=False, default="aluminium")
     aliases = Column(JSON, nullable=False, default=list)
+    superseded_by_id = Column(String, ForeignKey("entities.id"))
     __table_args__ = (CheckConstraint("kind IN ('company','facility')"),)
 
 class Source(Base):
@@ -27,6 +28,10 @@ class Source(Base):
     source_type = Column(String, nullable=False)
     url = Column(String, nullable=False)
     access_status = Column(String, nullable=False)
+    access_method = Column(String, nullable=False, default="manual")
+    coverage = Column(Text, nullable=False, default="")
+    update_frequency = Column(String, nullable=False, default="unknown")
+    licence_notes = Column(Text, nullable=False, default="")
     notes = Column(Text, nullable=False, default="")
 
 class Document(Base):
@@ -60,6 +65,9 @@ class Observation(Base):
     quality_messages = Column(JSON, nullable=False, default=list)
     parser_version = Column(String, nullable=False, default="manual-v1")
     recorded_at = Column(String, nullable=False, default=now)
+    superseded_by_id = Column(String, ForeignKey("observations.id"))
+    supersession_reason = Column(Text)
+    superseded_at = Column(String)
     __table_args__ = (CheckConstraint("valid_to IS NULL OR valid_to >= valid_from"),
                       CheckConstraint("normalized_value IS NULL OR normalized_value >= 0"))
 
@@ -73,6 +81,10 @@ class Relationship(Base):
     valid_from = Column(String, nullable=False)
     valid_to = Column(String)
     document_id = Column(String, ForeignKey("documents.id"), nullable=False)
+    evidence_reference = Column(Text, nullable=False, default="")
+    superseded_by_id = Column(String, ForeignKey("relationships.id"))
+    supersession_reason = Column(Text)
+    superseded_at = Column(String)
     __table_args__ = (CheckConstraint("role IN ('OWNS','OPERATES')"),
                       CheckConstraint("percentage IS NULL OR (percentage >= 0 AND percentage <= 100)"),
                       CheckConstraint("valid_to IS NULL OR valid_to >= valid_from"))
@@ -99,6 +111,9 @@ class MarketObservation(Base):
     data_status = Column(String, nullable=False)
     document_id = Column(String, ForeignKey("documents.id"), nullable=False)
     evidence_reference = Column(String, nullable=False)
+    superseded_by_id = Column(String, ForeignKey("market_observations.id"))
+    supersession_reason = Column(Text)
+    superseded_at = Column(String)
     __table_args__ = (CheckConstraint("volume IS NULL OR volume >= 0"),
                       CheckConstraint("open_interest IS NULL OR open_interest >= 0"))
 
@@ -112,6 +127,11 @@ class Review(Base):
     reviewer = Column(String)
     reason = Column(Text)
     decided_at = Column(String)
+    normalized_name = Column(String, nullable=False, default="")
+    match_method = Column(String, nullable=False, default="NONE")
+    resolver_version = Column(String, nullable=False, default="1.0.0")
+    context = Column(JSON, nullable=False, default=dict)
+    document_id = Column(String, ForeignKey("documents.id"))
 
 class Run(Base):
     __tablename__ = "runs"
@@ -120,6 +140,7 @@ class Run(Base):
     pipeline_version = Column(String, nullable=False, default="0.1.0")
     status = Column(String, nullable=False)
     manifest = Column(JSON, nullable=False)
+    finished_at = Column(String)
 
 class Audit(Base):
     __tablename__ = "audit"
@@ -129,6 +150,63 @@ class Audit(Base):
     action = Column(String, nullable=False)
     record_id = Column(String, nullable=False)
     detail = Column(JSON, nullable=False)
+
+
+class SourceAccess(Base):
+    __tablename__ = "source_access"
+    id = Column(String, primary_key=True, default=uid)
+    source_id = Column(String, ForeignKey("sources.id"), nullable=False, index=True)
+    credential_ref = Column(String)
+    terms_url = Column(String)
+    rate_limit_notes = Column(Text, nullable=False, default="")
+    notes = Column(Text, nullable=False, default="")
+
+
+class RetrievalAttempt(Base):
+    __tablename__ = "retrieval_attempts"
+    id = Column(String, primary_key=True, default=uid)
+    run_id = Column(String, ForeignKey("runs.id"), nullable=False, index=True)
+    source_id = Column(String, ForeignKey("sources.id"), nullable=False, index=True)
+    document_id = Column(String, ForeignKey("documents.id"))
+    requested_url = Column(String, nullable=False)
+    attempted_at = Column(String, nullable=False, default=now)
+    http_status = Column(Integer)
+    outcome = Column(String, nullable=False)
+    error_message = Column(Text)
+    __table_args__ = (CheckConstraint("outcome IN ('SUCCESS','UNCHANGED','FAILED')"),)
+
+
+class ResolutionMatch(Base):
+    __tablename__ = "resolution_matches"
+    review_id = Column(String, ForeignKey("reviews.id"), primary_key=True)
+    entity_id = Column(String, ForeignKey("entities.id"), primary_key=True)
+    method = Column(String, nullable=False)
+    score = Column(Float, nullable=False)
+    matched_text = Column(String, nullable=False)
+    __table_args__ = (CheckConstraint("score >= 0 AND score <= 1"),)
+
+
+class QualityRun(Base):
+    __tablename__ = "quality_runs"
+    id = Column(String, primary_key=True, default=uid)
+    ruleset_version = Column(String, nullable=False)
+    started_at = Column(String, nullable=False, default=now)
+    finished_at = Column(String)
+    status = Column(String, nullable=False)
+    summary = Column(JSON, nullable=False, default=dict)
+
+
+class QualityCheckResult(Base):
+    __tablename__ = "quality_check_results"
+    id = Column(String, primary_key=True, default=uid)
+    quality_run_id = Column(String, ForeignKey("quality_runs.id"), nullable=False, index=True)
+    check_code = Column(String, nullable=False)
+    severity = Column(String, nullable=False)
+    subject_type = Column(String, nullable=False)
+    subject_id = Column(String, nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    details = Column(JSON, nullable=False, default=dict)
+    __table_args__ = (CheckConstraint("severity IN ('INFO','WARN','ERROR','BLOCK')"),)
 
 class PaperAccount(Base):
     __tablename__ = 'paper_accounts'
