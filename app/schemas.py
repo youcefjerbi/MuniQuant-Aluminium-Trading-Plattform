@@ -30,6 +30,10 @@ class SourceIn(Input):
     source_type: Literal['company', 'government', 'regulator', 'industry', 'exchange', 'synthetic']
     url: str = Field(pattern=r'^https?://', max_length=2048)
     access_status: Literal['permitted', 'review_required', 'restricted', 'synthetic'] = 'review_required'
+    access_method: Literal['manual', 'http_file', 'http_html', 'api', 'upload'] = 'manual'
+    coverage: str = Field(default='', max_length=2000)
+    update_frequency: str = Field(default='unknown', max_length=100)
+    licence_notes: str = Field(default='', max_length=4000)
     notes: str = Field(default='', max_length=4000)
 
 class DocumentIn(Input):
@@ -62,6 +66,7 @@ class RelationshipIn(Input):
     valid_from: date
     valid_to: date | None = None
     document_id: str
+    evidence_reference: str = Field(default='', max_length=1000)
     @model_validator(mode='after')
     def dates(self):
         if self.valid_to and self.valid_to < self.valid_from: raise ValueError('Invalid validity interval')
@@ -105,3 +110,11 @@ class DecisionIn(Input):
 
 class CsvIn(Input):
     document_id: str
+
+
+class SourceAccessIn(Input):
+    source_id: str
+    credential_ref: str | None = Field(default=None, pattern=r'^[A-Z][A-Z0-9_]*$', max_length=128)
+    terms_url: str | None = Field(default=None, pattern=r'^https?://', max_length=2048)
+    rate_limit_notes: str = Field(default='', max_length=2000)
+    notes: str = Field(default='', max_length=4000)
