@@ -7,16 +7,22 @@ import secrets
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from jsonschema import validate
 from .db import make_engine, DATABASE_URL
-from .models import Entity, Source, Document, Observation, MarketObservation, Relationship, Review, Run, Audit, now
-from .schemas import EntityIn, SourceIn, DocumentIn, ObservationIn, MarketIn, RelationshipIn, ResolveIn, DecisionIn, CsvIn
-from .services import record, acquire, add_observation, resolve, export_package
+from .models import (
+    Entity, Source, Document, Observation, MarketObservation, Relationship, Review, Run, Audit, now,
+    QualityCheckResult, QualityRun, ResolutionMatch, RetrievalAttempt, SourceAccess,
+)
+from .schemas import EntityIn, SourceIn, DocumentIn, ObservationIn, MarketIn, RelationshipIn, ResolveIn, DecisionIn, CsvIn, SourceAccessIn
+from .services import record, acquire, add_observation, resolve, export_package, canonical
+from .export_v1 import iter_cep_v1
+from .quality import run_quality
+from .trace import trace_observation
 
 logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger('muniquant')
@@ -81,8 +87,15 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.get('/api/workspace')
     def workspace(s:Session=Depends(session)):
         models={'entities':Entity,'sources':Source,'documents':Document,'observations':Observation,
-                'market':MarketObservation,'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit}
-        return {name:[record(o) for o in s.scalars(select(model).order_by(model.id)).all()] for name,model in models.items()}
+                'market':MarketObservation,'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit,
+                'source_access':SourceAccess,'retrieval_attempts':RetrievalAttempt,'resolution_matches':ResolutionMatch,
+                'quality_runs':QualityRun,'quality_results':QualityCheckResult}
+        result={}
+        for name,model in models.items():
+            # ResolutionMatch has a composite key and intentionally no synthetic id.
+            order_by=tuple(model.__table__.primary_key.columns)
+            result[name]=[record(o) for o in s.scalars(select(model).order_by(*order_by)).all()]
+        return result
 
     @app.post('/api/entities',status_code=201)
     def entity(data:EntityIn, s:Session=Depends(session), actor=Depends(writer)):
@@ -92,11 +105,22 @@ def create_app(database_url=None, storage=None, write_token=None):
     def source(data:SourceIn, s:Session=Depends(session), actor=Depends(writer)):
         obj=Source(**data.model_dump()); s.add(obj); audit(s,actor,'create',obj); s.commit(); return record(obj)
 
+    @app.post('/api/source-access',status_code=201)
+    def source_access(data:SourceAccessIn,s:Session=Depends(session),actor=Depends(writer)):
+        get(s,Source,data.source_id)
+        obj=SourceAccess(**data.model_dump());s.add(obj);audit(s,actor,'source_access',obj);s.commit();return record(obj)
+
     @app.post('/api/documents',status_code=201)
     def document(data:DocumentIn, s:Session=Depends(session), actor=Depends(writer)):
         try: obj,duplicate=acquire(s,app.state.storage,data)
         except ValueError as exc:
-            s.rollback(); s.add(Run(status='failed',manifest={'source_id':data.source_id,'adapter':'text-upload-v1','error':str(exc)})); s.commit(); raise
+            s.rollback()
+            run=Run(status='failed',finished_at=now(),manifest={'source_id':data.source_id,'adapter':'text-upload-v1','adapter_version':'1.0.0','error':str(exc)})
+            s.add(run);s.flush()
+            if s.get(Source,data.source_id):
+                s.add(RetrievalAttempt(run_id=run.id,source_id=data.source_id,requested_url=data.original_url,
+                                       outcome='FAILED',error_message=str(exc)))
+            s.commit(); raise
         audit(s,actor,'duplicate' if duplicate else 'acquire',obj); s.commit()
         return dict(record(obj),duplicate=duplicate)
 
@@ -131,7 +155,11 @@ def create_app(database_url=None, storage=None, write_token=None):
     def resolver(data:ResolveIn,s:Session=Depends(session),actor=Depends(writer)):
         result=resolve(s,data.name,data.country)
         if result['status']!='resolved':
-            obj=Review(raw_name=data.name,candidate_ids=[e['id'] for e in result['candidates']]);s.add(obj)
+            obj=Review(raw_name=data.name,normalized_name=canonical(data.name),match_method=result['match_method'],
+                       context={'country':data.country} if data.country else {},
+                       candidate_ids=[e['id'] for e in result['candidates']]);s.add(obj);s.flush()
+            for match in result['matches']:
+                s.add(ResolutionMatch(review_id=obj.id,**match))
             audit(s,actor,'queue_review',obj);s.commit();result['review_id']=obj.id
         return result
 
@@ -181,6 +209,34 @@ def create_app(database_url=None, storage=None, write_token=None):
         package=export_package(s,app.state.storage)
         validate(package,json.loads((Path(__file__).parent/'package.schema.json').read_text()))
         return JSONResponse(package,headers={'Content-Disposition':'attachment; filename="commodity-evidence-package.json"'})
+
+    @app.get('/api/observations/{identifier}/trace')
+    def observation_trace(identifier:str,s:Session=Depends(session)):
+        try: return trace_observation(s,app.state.storage,identifier)
+        except LookupError as exc: raise HTTPException(404,str(exc))
+
+    @app.post('/api/quality/runs',status_code=201)
+    def quality_run(s:Session=Depends(session),actor=Depends(writer)):
+        run,findings=run_quality(s);audit(s,actor,'quality_run',run);s.commit()
+        return {'run':record(run),'findings':[record(item) for item in findings]}
+
+    @app.get('/api/quality/latest')
+    def quality_latest(s:Session=Depends(session)):
+        run=s.scalar(select(QualityRun).order_by(QualityRun.started_at.desc()).limit(1))
+        if not run:return {'run':None,'findings':[]}
+        findings=s.scalars(select(QualityCheckResult).where(QualityCheckResult.quality_run_id==run.id)
+                           .order_by(QualityCheckResult.severity.desc(),QualityCheckResult.check_code)).all()
+        return {'run':record(run),'findings':[record(item) for item in findings]}
+
+    @app.get('/api/export/cep-v1.jsonl')
+    def export_cep_v1(s:Session=Depends(session)):
+        # Evaluate while the request-owned session is definitely open. The pilot
+        # export is bounded; true streaming can use a separately-owned session once
+        # pagination/batch export is introduced.
+        lines=[json.dumps(item,separators=(',',':'),ensure_ascii=False)+'\n'
+               for item in iter_cep_v1(s,app.state.storage)]
+        return StreamingResponse(iter(lines),media_type='application/x-ndjson',
+                                 headers={'Content-Disposition':'attachment; filename="commodity-evidence-package-v1.jsonl"'})
 
     from .trading import register_routes
     register_routes(app,session,writer)
