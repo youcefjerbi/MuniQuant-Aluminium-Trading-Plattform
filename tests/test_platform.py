@@ -32,6 +32,8 @@ def test_evidence_dedup_and_version(client,example):
     assert revised['version']==2 and revised['content_hash']!=d['content_hash']
     assert client.get('/api/documents/'+d['id']+'/content').content==b'Capacity: 400 kt/year'
     assert len(client.get('/api/workspace').json()['documents'])==2
+    attempts=client.get('/api/workspace').json()['retrieval_attempts']
+    assert sorted(item['outcome'] for item in attempts)==['SUCCESS','SUCCESS','UNCHANGED']
 
 def test_historical_observations_and_quality(client,example):
     e,s,d,_=example
@@ -61,7 +63,39 @@ def test_resolution_ambiguity_and_review_audit(client,example):
     assert client.post(url,json={'selected_entity_id':e['id'],'reason':'overwrite'}).status_code==409
     workspace=client.get('/api/workspace').json()
     assert workspace['reviews'][0]['reviewer']=='local-curator'
+    assert len(workspace['resolution_matches'])==2
+    assert {m['method'] for m in workspace['resolution_matches']}=={'ALIAS'}
     assert any(a['action']=='review_decision' for a in workspace['audit'])
+
+def test_source_governance_trace_quality_and_cep_v1(client,example):
+    e,s,d,_=example
+    access=client.post('/api/source-access',json={
+        'source_id':s['id'],'credential_ref':'TEST_SOURCE_TOKEN',
+        'terms_url':'https://example.org/terms','rate_limit_notes':'One request per minute',
+    })
+    assert access.status_code==201,access.text
+    assert access.json()['credential_ref']=='TEST_SOURCE_TOKEN'
+
+    first=client.post('/api/observations',json=observation(e,d)).json()
+    client.post('/api/observations',json={**observation(e,d),'reported_value':'450'})
+    quality=client.post('/api/quality/runs')
+    assert quality.status_code==201,quality.text
+    assert quality.json()['run']['ruleset_version']=='1.0.0'
+    assert {item['check_code'] for item in quality.json()['findings']}=={'CONFLICTING_SOURCES'}
+
+    trace=client.get('/api/observations/'+first['id']+'/trace').json()
+    assert trace['snapshot_verified'] is True
+    assert trace['document']['id']==d['id']
+    assert trace['source']['id']==s['id']
+    assert trace['acquisition_runs'][0]['manifest']['adapter']=='text-upload-v1'
+
+    exported=client.get('/api/export/cep-v1.jsonl')
+    assert exported.status_code==200,exported.text
+    lines=[json.loads(line) for line in exported.text.splitlines()]
+    assert len(lines)==2
+    assert all(line['package_version']=='1.0.0' for line in lines)
+    assert all(line['quality_status']=='WARN' for line in lines)
+    assert all(line['quality_findings']==['CONFLICTING_SOURCES'] for line in lines)
 
 def test_csv_atomicity_and_idempotency(client,example):
     e,s,d,payload=example
@@ -103,7 +137,9 @@ def test_access_restriction_and_failed_run(client,example):
     _,_,_,payload=example
     s=client.post('/api/sources',json={'name':'Restricted','publisher':'Exchange','source_type':'exchange','url':'https://example.org','access_status':'restricted'}).json()
     assert client.post('/api/documents',json={**payload,'source_id':s['id']}).status_code==422
-    assert any(r['status']=='failed' for r in client.get('/api/workspace').json()['runs'])
+    workspace=client.get('/api/workspace').json()
+    assert any(r['status']=='failed' for r in workspace['runs'])
+    assert any(r['source_id']==s['id'] and r['outcome']=='FAILED' for r in workspace['retrieval_attempts'])
 
 def test_database_foreign_keys(client):
     with pytest.raises(IntegrityError):

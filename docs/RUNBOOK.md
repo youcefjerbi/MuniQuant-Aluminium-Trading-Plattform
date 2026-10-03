@@ -27,6 +27,24 @@ Application request logs are JSON records with method, path, status and duration
 5. Register facility identity and aliases. Add the observation with the page/table/row/section locator.
 6. Inspect quality and export. Preserve original values even when normalized.
 
+Record only an environment-variable/key-vault reference in `credential_ref`; never
+store an API key or password in the database. Retrieval attempts record outcome,
+requested URL, timestamp and error information independently from successful
+document snapshots.
+
+## Quality, trace and export
+
+Run the current ruleset from **Data quality** or call `POST /api/quality/runs` with
+the curator bearer token. The run records its ruleset version and findings for
+missing publication dates/locators, missing normalization, conflicting sourced
+values and ownership totals above 100%. `GET /api/quality/latest` returns the most
+recent run.
+
+Use `GET /api/observations/{id}/trace` to follow an observation through entity,
+document, source and acquisition run; the response re-verifies the stored snapshot
+hash. `GET /api/export/cep-v1.jsonl` emits one active industrial observation per
+line. The original `/api/export` draft contract remains available for compatibility.
+
 ## CSV ingestion
 
 Capture a document with content type `text/csv`, then choose Import CSV. Required header:
@@ -63,8 +81,8 @@ Restore refuses a populated data-product database and checks that the reconstruc
 - Single shared curator token, no individual users, no read authorization.
 - Local/pasted text acquisition and CSV parser; remote sources and binary PDF adapters remain planned.
 - No licensed market feed, no automatic active/front-month contract selection.
-- No entity merges, observation corrections/supersession, or review-to-alias automation yet.
-- Conservative capacity-jump warning; no conflict adjudication or ownership-total validation.
+- Supersession links are represented, but no entity merge/correction workflow or review-to-alias automation exists yet.
+- Cross-source conflicts and ownership totals are detected, but adjudication remains a curator workflow.
 - Workspace reads return the complete pilot dataset; pagination is required for larger deployments.
 - ISO date/time strings and floating-point normalized capacities are initial implementation trade-offs.
 - Frozen bundles reproduce stored data products, not arbitrary parser re-extraction or the operational audit database.

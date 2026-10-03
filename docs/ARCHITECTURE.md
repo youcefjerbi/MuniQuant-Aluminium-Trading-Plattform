@@ -44,13 +44,13 @@ flowchart LR
 |---|---|---|
 | API and orchestration | Python 3.11+ / FastAPI | Typed request validation and generated API documentation; suitable for data adapters |
 | Persistence | SQLAlchemy 2 / Alembic / PostgreSQL 16 | Transactions, referential integrity, explicit migrations, portable local development |
-| Native core | C++17 / pybind11 | Unit-normalization and Unicode name-distance kernels; a clear, testable native boundary |
+| Native core | C++17 / pybind11 | Existing capacity-normalization and Unicode name-distance kernels; a clear, testable native boundary |
 | UI | HTML, CSS, small JavaScript application | No separate frontend build or service; practical for a small team and editable in the repository |
 | Evidence | Local volume, SHA-256 filenames | Exact content reuse, corruption detection, easy backup; S3-compatible storage can replace the adapter later |
 | Deployment | Docker Compose | Application and database health checks, explicit migration stage, persistent volumes |
 | CI | GitHub Actions | Native compilation, tests, schema migration checks, PostgreSQL integration and container build |
 
-C++ currently provides a deterministic implementation, not a demonstrated speedup. Profile before adding more native code. No silent Python fallback hides a missing native build. Keep I/O, text decoding, Unicode normalization, business workflows and database transactions in Python.
+C++ currently provides a deterministic implementation, not a demonstrated speedup. Profile before adding more native code. No silent Python fallback hides a missing native build. Python owns the governed unit alias/dimension catalog because it is policy rather than a compute kernel; C++ remains used for edit distance and its original capacity API. Keep I/O, text decoding, Unicode normalization, business workflows and database transactions in Python.
 
 A React frontend, distributed queue, Kafka, Kubernetes, and separate C++ microservice were considered unnecessary for the initial approximately 360 person-hour project. Add these only when measurable operational needs justify them.
 
@@ -81,11 +81,14 @@ The last two relationships are application-level references in JSON manifests/au
 - `market_observations`: instrument, venue/provider, market layer, concrete contract, prompt date, commodity, grade, region, price type, original decimal value/currency/unit, effective/publication timestamps, volume, open interest, status, evidence reference.
 - `reviews`: raw name, frozen candidates, decision, selected entity, server-configured curator, reason, decision time.
 - `runs`: acquisition/import status, pipeline version, input hashes, IDs and adapter identity.
+- `retrieval_attempts`: source/run/document links, requested URL, time, status and failure information for every acquisition attempt.
+- `resolution_matches`: frozen resolver method, score and matched text for each queued review candidate.
+- `quality_runs` and `quality_check_results`: versioned executions and persisted, subject-addressable findings.
 - `audit`: append-only application mutation events; review reasons and selections remain in the immutable review decision record.
 
 A capacity is an observation, never a mutable field on a facility. Conflicting reports are retained. Dates are ISO 8601 strings in v0.1 for SQLite/PostgreSQL portability; migrate to native PostgreSQL date/timestamptz columns before production-scale query workloads. Validity endpoints are inclusive. Observation time (`recorded_at`), evidence publication time, retrieval time, and effective/valid time remain distinct.
 
-Reported decimal market values are strings, avoiding binary floating-point rounding. Industrial capacities retain their reported string alongside C++-normalized floating-point tonnes/year. Supported capacity units are exactly `t/year`, `kt/year`, and `Mt/year`. Other dimensions and daily-to-annual conversion need an explicit policy; no implicit operating-day assumption is made.
+Reported decimal market values are strings, avoiding binary floating-point rounding. Industrial capacities retain their reported string alongside normalized floating-point tonnes/year. Canonical mass-rate units are `t/year`, `kt/year`, `Mt/year`, and `t/day`, with an explicit deterministic alias catalog such as `ktpa` and case-sensitive `Mtpa`. Ambiguous lower-case `mt` spellings are rejected. The catalog also models power and ratio dimensions so a power unit cannot be accepted for capacity; no implicit operating-day assumption is made.
 
 ### Market identity
 
@@ -99,7 +102,7 @@ LME cash, 3M, later maturities, SHFE contracts, and each regional premium remain
 2. Capture permitted UTF-8 source content through the interface/API. Text, CSV, HTML and JSON content types are accepted; HTML is stored as bytes and never executed.
 3. Hash the exact UTF-8 bytes, preserve the snapshot, register document identity and version, and log the attempt.
 4. Enter an attributed observation or import a capacity CSV from its registered snapshot.
-5. Resolve facility names using NFKC normalization, case folding, whitespace/punctuation normalization and explicit aliases. Country optionally narrows the candidate set.
+5. Resolve facility names using NFKD accent folding, case folding, punctuation normalization, legal-suffix removal and explicit aliases. Country optionally narrows the candidate set.
 6. A unique exact/alias match resolves automatically. Multiple matches remain ambiguous. C++ edit distance proposes candidates only; it never promotes a fuzzy match to trusted identity.
 7. Validate type, unit, value, dates and references. Invalid records receive HTTP 422; warnings stay visible on accepted records.
 8. Export a schema-validated draft evidence package. Rehash every referenced snapshot before returning the package.
@@ -112,11 +115,11 @@ Remote acquisition is intentionally not enabled in this version. Next implement 
 
 Implemented rejections: negative/nonfinite capacity, unknown capacity unit, invalid status, invalid validity range, absent facility/document, restricted source capture, malformed requests, missing futures identity, timezone-free market timestamps, negative volume/OI, invalid share, and decisions outside the recorded candidate set.
 
-Implemented warnings: missing publication date and capacity differing by more than 50% from an existing observation. The latter is a conservative heuristic across all historical observations, not a judgment that a change is wrong. Overlap conflicts, ownership-total checks, country/commodity reference tables, duplicate market observations and richer freshness checks remain planned.
+Inline warnings cover a missing publication date and capacity differing by more than 50% from an existing observation. A separately persisted, versioned ruleset checks missing evidence metadata, missing normalization, same-date conflicting source values and ownership totals above 100%. Findings flag evidence for review; they do not choose a winning source. Country/commodity reference tables, duplicate market observations, temporal-overlap analysis and richer freshness checks remain planned.
 
 The draft package includes stable IDs, source/document joins, versions, hashes, locators, reported and normalized values, parser/pipeline versions and a deterministic hash of sorted JSON. Repeated exports of the same stored state are equivalent. Frozen bundles preserve package metadata plus snapshots for verification and restoring an equivalent data product in a fresh database. This is evidence-package reconstruction; it does not claim deterministic re-extraction from arbitrary PDFs or full historical trading replay.
 
-The contract is **0.1.0-draft**, not a falsely frozen v1. Freeze v1 only after consumers validate it in week 10. Keep breaking changes explicit and versioned.
+The frozen-bundle contract remains **0.1.0-draft** for backward compatibility. An additive CEP **1.0.0 JSONL** endpoint provides one traceable record per active industrial observation; it does not replace the bundle contract or include analytical/trading fields. Keep future breaking changes explicit and versioned.
 
 ## 6. Security and operation
 

@@ -8,8 +8,10 @@ The architecture document contains the twelve-week owner-based plan. This list d
 - [x] Compiled C++ capacity normalization and Unicode name distance.
 - [x] Company/facility records, aliases and sourced dated relationships.
 - [x] Source access metadata, SHA-256 snapshots, document versions and retrieval manifests.
+- [x] Structured source-access references and per-attempt SUCCESS/UNCHANGED/FAILED acquisition records.
 - [x] Historical capacity/status observations and distinct market observations.
-- [x] Exact/alias resolution, uncertain candidate queue, one-time reviewed decisions.
+- [x] Normalized/alias/fuzzy resolution evidence, uncertain candidate queue, one-time reviewed decisions.
+- [x] Versioned cross-record quality checks, observation trace API and CEP v1 JSONL export.
 - [x] Atomic CSV ingestion with sequential duplicate-import detection.
 - [x] Schema-validated draft exports and verified frozen-bundle reconstruction.
 - [x] Migrations, native/API tests, CI and container configuration.
@@ -26,7 +28,7 @@ The architecture document contains the twelve-week owner-based plan. This list d
 | P1 | Resolution review application | Accepted matches can create audited aliases; supersession/merge policy preserves identity history |
 | P1 | Concurrent import idempotency | Unique transactional import identity prevents double insertion under parallel requests |
 | P1 | Market source adapter | Concrete contract IDs, timezone policy, original currency, source publication times and licensing respected |
-| P1 | Strong reference data | Country/product/type tables, unit dimension catalog and schema constraints |
+| P1 | Strong reference data | Country/product/type tables and schema constraints; the in-code unit dimension catalog is implemented but should become governed reference data when curator editing is required |
 | P1 | Operational hardening | Pagination, indexing, overlap/conflict checks, recovery drill, secret rotation and deployment tests |
 | P2 | Contract v1 | Consumer review, compatibility fixtures and version policy agreed before freeze |
 | P2 | Broader pilot | 50–100 verified facilities, 5–10 source families, ownership and operating-status history |
