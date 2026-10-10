@@ -66,6 +66,7 @@ jobs:
           python -c "import json; p=json.load(open('/tmp/ci-package.json')); assert p['package_version']=='1.0.0' and len(p['records'])==6"
           docker stop evidence-smoke
           docker cp evidence-smoke:/app/data /tmp/evidence-backup
+          docker run --rm --user root -v /tmp/evidence-backup:/backup muniquant:test chown -R appuser:appuser /backup
           docker exec ${{ job.services.postgres.id }} pg_dump -U test -d muniquant_test -Fc > /tmp/operational-backup.dump
           docker exec ${{ job.services.postgres.id }} createdb -U test muniquant_restore_test
           docker exec -i ${{ job.services.postgres.id }} pg_restore -U test -d muniquant_restore_test < /tmp/operational-backup.dump
