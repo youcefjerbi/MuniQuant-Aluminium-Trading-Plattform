@@ -62,7 +62,7 @@ Restore refuses a populated data-product database and checks that the reconstruc
 
 - Single shared curator token, no individual users, no read authorization.
 - Local/pasted text acquisition and CSV parser; remote sources and binary PDF adapters remain planned.
-- No licensed market feed, no automatic active/front-month contract selection.
+- Industrial evidence scope only; market/trading routes and screens removed.
 - No entity merges, observation corrections/supersession, or review-to-alias automation yet.
 - Conservative capacity-jump warning; no conflict adjudication or ownership-total validation.
 - Workspace reads return the complete pilot dataset; pagination is required for larger deployments.

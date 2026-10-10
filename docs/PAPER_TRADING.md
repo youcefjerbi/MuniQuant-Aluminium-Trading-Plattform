@@ -1,3 +1,7 @@
+# Historical design — outside current scope
+
+This module is removed from the active application under the authoritative upstream-only project plan. This file records history and is not a current requirement or backlog.
+
 # Charts and paper trading
 
 Added at the user's request on 3 October 2026. This extends the original data-only scope with an isolated, simulated trading workspace. No broker is connected and no real orders can be placed.

@@ -1,34 +1,25 @@
-# Delivery backlog
+# BACKLOG_v0.1 — governed delivery
 
-The architecture document contains the twelve-week owner-based plan. This list distinguishes implemented foundations from remaining production work.
+Gate 1 approval is pending; week numbers are requirements allocations, not elapsed work or completed gates. Baseline code predates this authoritative scope reconciliation.
 
-## Implemented in v0.1
+| Priority | Week | Deliverable / acceptance | Owner |
+|---|---|---|---|
+| P0 | 1 | Approve architecture, ERD, source model, boundary | Sponsor / PM |
+| P0 | 2 | Controlled master/reference schema, additive migrations; fresh PostgreSQL deploy | SE1 |
+| P0 | 2 | Docker/API/CI schema tests; 10–15 sourced real facilities | SE2 / PM |
+| P0 | 3 | Source access/document/version relations; one real retrieved and hash-verified snapshot | SE1 / SE2 / PM |
+| P0 | 4 | Historical capacity/status, Decimal dimensional units; conflicts/vintages preserved | SE1 / SE2 |
+| P0 | 5 | Company/facility alias/supersession, ambiguity benchmark of 50 names; real sourced resolution | SE1 / SE2 / PM |
+| P0 | 6 | Immutable authenticated review decisions, review SLA/escalation; reconstruct every decision | SE1 / SE2 / PM |
+| P1 | 7 | HTML/PDF/CSV adapters, parser locators, config-driven onboarding | SE2 |
+| P0 | 8 | DB invariants, machine-readable quality/severity; predictable corrupt-fixture failures | SE1 / SE2 / PM |
+| P0 | 9 | Run manifests, frozen-input parser rerun and equivalent logical evidence output | SE1 / SE2 |
+| P0 | 10 | Closed v1 package, schema/consumer validation and version freeze | SE1 / SE2 / PM |
+| P0 | 11 | PostgreSQL migration integrity, import concurrency, retries, recovery, end-to-end UAT | All |
+| P0 | 12 | Release/runbook/handover; real-source full demonstration; final sponsor acceptance | All |
 
-- [x] Python API and responsive web workspace.
-- [x] Compiled C++ capacity normalization and Unicode name distance.
-- [x] Company/facility records, aliases and sourced dated relationships.
-- [x] Source access metadata, SHA-256 snapshots, document versions and retrieval manifests.
-- [x] Historical capacity/status observations and distinct market observations.
-- [x] Exact/alias resolution, uncertain candidate queue, one-time reviewed decisions.
-- [x] Atomic CSV ingestion with sequential duplicate-import detection.
-- [x] Schema-validated draft exports and verified frozen-bundle reconstruction.
-- [x] Migrations, native/API tests, CI and container configuration.
+Protect provenance, hashing, identity, source linkage, validation, tests, contract and reproducibility. If capacity is insufficient remove nice dashboards first, extra adapters second, dataset breadth third, advanced matching fourth.
 
-## Next milestone: real permitted evidence
+## Risks and required decisions
 
-| Priority | Task | Acceptance |
-|---|---|---|
-| P0 | Curate source access and license register | Two industrial source families and one market provider have explicit acquisition/retention decisions |
-| P0 | Controlled remote downloader | Allowlisted hosts, bounded size, redirects checked, timeouts/retries, exact bytes retained, failure manifests |
-| P0 | Binary PDF adapter | Preserve original binary file, page-level extraction locator and parser version; golden test fixture |
-| P0 | Curated pilot data | 10–15 real facilities with traceable observations; synthetic fixtures remain separate |
-| P0 | Individual user access | Authenticated reviewer identities and role-based write/read access; token pilot retired for shared deployment |
-| P1 | Resolution review application | Accepted matches can create audited aliases; supersession/merge policy preserves identity history |
-| P1 | Concurrent import idempotency | Unique transactional import identity prevents double insertion under parallel requests |
-| P1 | Market source adapter | Concrete contract IDs, timezone policy, original currency, source publication times and licensing respected |
-| P1 | Strong reference data | Country/product/type tables, unit dimension catalog and schema constraints |
-| P1 | Operational hardening | Pagination, indexing, overlap/conflict checks, recovery drill, secret rotation and deployment tests |
-| P2 | Contract v1 | Consumer review, compatibility fixtures and version policy agreed before freeze |
-| P2 | Broader pilot | 50–100 verified facilities, 5–10 source families, ownership and operating-status history |
-
-Simulated stock/options orders and charting are now implemented as a user-requested scope extension; see PAPER_TRADING.md. Live trading, price forecasting, and broker execution remain excluded.
+Access/licensing and live source reliability: PM records explicit policy. Incorrect identity merge: never auto-accept ambiguity. Legacy string dates/float capacity: SE1 audits migration/backfill. Snapshot/DB divergence: SE2 verifies hashes and coordinated recovery. C++ cost without measured benefit: benchmark distance; move trivial conversion to Python. Shared write actor: local pilot only until individual identities. Scope drift: active market/trading removed; no downstream proprietary logic. Target final coverage 50–100 meaningful facilities and 5–10 source families; neither has been achieved.

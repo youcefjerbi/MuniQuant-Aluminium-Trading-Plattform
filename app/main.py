@@ -81,7 +81,7 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.get('/api/workspace')
     def workspace(s:Session=Depends(session)):
         models={'entities':Entity,'sources':Source,'documents':Document,'observations':Observation,
-                'market':MarketObservation,'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit}
+                'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit}
         return {name:[record(o) for o in s.scalars(select(model).order_by(model.id)).all()] for name,model in models.items()}
 
     @app.post('/api/entities',status_code=201)
@@ -119,13 +119,6 @@ def create_app(database_url=None, storage=None, write_token=None):
             raise ValueError('Relationship requires a company and a facility')
         get(s,Document,data.document_id)
         obj=Relationship(**data.model_dump(mode='json')); s.add(obj); audit(s,actor,'relate',obj); s.commit(); return record(obj)
-
-    @app.post('/api/market',status_code=201)
-    def market(data:MarketIn,s:Session=Depends(session),actor=Depends(writer)):
-        doc=get(s,Document,data.document_id)
-        source=get(s,Source,doc.source_id)
-        if source.source_type=='synthetic' and data.data_status!='synthetic': raise ValueError('Synthetic evidence must remain labelled synthetic')
-        obj=MarketObservation(**data.model_dump(mode='json')); s.add(obj); audit(s,actor,'market_observation',obj); s.commit(); return record(obj)
 
     @app.post('/api/resolve')
     def resolver(data:ResolveIn,s:Session=Depends(session),actor=Depends(writer)):
@@ -182,8 +175,6 @@ def create_app(database_url=None, storage=None, write_token=None):
         validate(package,json.loads((Path(__file__).parent/'package.schema.json').read_text()))
         return JSONResponse(package,headers={'Content-Disposition':'attachment; filename="commodity-evidence-package.json"'})
 
-    from .trading import register_routes
-    register_routes(app,session,writer)
 
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     @app.get('/',include_in_schema=False)

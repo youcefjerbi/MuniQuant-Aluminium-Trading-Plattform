@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import pytest
 import muniquant_core as core
+from app.services import normalize_capacity
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from app.models import Review
@@ -12,11 +13,11 @@ def observation(e,d,**kw):
     return dict(entity_id=e['id'],document_id=d['id'],reported_value='400',reported_unit='kt/year',valid_from='2025-01-01',evidence_reference='page 4',**kw)
 
 def test_native_conversion_and_unicode_distance():
-    assert core.normalize_capacity(.5,'Mt/year')==500000
-    assert core.normalize_capacity(400,'kt/year')==400000
+    assert normalize_capacity(.5,'Mt/year')==500000
+    assert normalize_capacity(400,'kt/year')==400000
     assert core.name_distance('café','cafe')==1
     for value,unit in [(-1,'kt/year'),(float('nan'),'kt/year'),(1,'MW'),(float('inf'),'t/year'),(1e308,'Mt/year')]:
-        with pytest.raises(ValueError): core.normalize_capacity(value,unit)
+        with pytest.raises(ValueError): normalize_capacity(value,unit)
 
 def test_auth_and_health(client):
     assert client.get('/api/health').json()['native_core']=='0.1.0'
@@ -89,15 +90,15 @@ def test_export_determinism_and_corruption_detection(client,example):
     assert client.get('/api/export').status_code==422
     assert client.get('/api/documents/'+d['id']+'/content').status_code==409
 
-def test_market_contract_identity_and_currency(client,example):
-    _,_,d,_=example
-    payload={'instrument':'SHFE_AL_ACTIVE','exchange':'SHFE','market':'futures','region':'China','price_type':'settlement','value':'20500.25','currency':'CNY','unit':'tonne','effective_at':'2025-10-02T16:00:00+08:00','data_status':'reported','document_id':d['id'],'evidence_reference':'table 1'}
-    assert client.post('/api/market',json=payload).status_code==422
-    payload.update(contract_code='AL2512',prompt_date='2025-12-15')
-    r=client.post('/api/market',json=payload)
-    assert r.status_code==201,r.text
-    assert r.json()['value']=='20500.25' and r.json()['currency']=='CNY'
-    assert client.post('/api/market',json={**payload,'effective_at':'2025-10-02T16:00:00'}).status_code==422
+def test_upstream_boundary(client, example):
+    assert client.post('/api/market', json={}).status_code == 404
+    paths = client.get('/openapi.json').json()['paths']
+    assert not any('trading' in path or 'market' in path for path in paths)
+    assert 'market' not in client.get('/api/workspace').json()
+    assert client.get('/api/export').json()['market_observations'] == []
+    html = client.get('/').text
+    assert '#trading' not in html and '#market' not in html
+    assert client.get('/static/trading.js').status_code == 404
 
 def test_access_restriction_and_failed_run(client,example):
     _,_,_,payload=example

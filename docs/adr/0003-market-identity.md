@@ -1,3 +1,5 @@
+Status: superseded for this delivery by upstream-only Gate 1 architecture. Historical design; not current backlog.
+
 # ADR 0003: Preserve distinct market observations
 
 Status: accepted for v0.1; export contract remains draft.

@@ -1,12 +1,31 @@
 import hashlib
 import json
 import unicodedata
+import math
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from sqlalchemy import select, func
 import muniquant_core
 from .models import Entity, Source, Document, Observation, Review, Run, MarketObservation, Relationship, Audit
 
 PIPELINE_VERSION = '0.1.0'
+
+def normalize_capacity(value, unit):
+    factors = {'t/year': Decimal(1), 'kt/year': Decimal(1000), 'Mt/year': Decimal(1000000)}
+    if unit not in factors:
+        raise ValueError('Unsupported capacity unit')
+    try:
+        amount = Decimal(str(value))
+    except InvalidOperation as exc:
+        raise ValueError('Capacity must be numeric') from exc
+    if not amount.is_finite() or amount < 0:
+        raise ValueError('Capacity must be finite and nonnegative')
+    result = float(amount * factors[unit])
+    if not math.isfinite(result):
+        raise ValueError('Capacity overflow')
+    # Legacy storage is float; reported decimal text remains unchanged.
+    return result
+
 
 def record(obj):
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
@@ -57,7 +76,7 @@ def add_observation(session, data):
     messages=[]
     normalized=None; unit=None
     if data.attribute == 'capacity':
-        normalized=muniquant_core.normalize_capacity(float(data.reported_value), data.reported_unit)
+        normalized=normalize_capacity(data.reported_value, data.reported_unit)
         unit='t/year'
         prior=session.scalars(select(Observation).where(Observation.entity_id==entity.id, Observation.attribute=='capacity')).all()
         if any(p.normalized_value and abs(normalized-p.normalized_value)/p.normalized_value > .5 for p in prior):
@@ -84,7 +103,7 @@ def export_package(session, storage):
              'documents':sorted(docs.values(),key=lambda d:d['id']),
              'observations': [dict(record(o),resolution_status='resolved') for o in session.scalars(select(Observation).order_by(Observation.id))],
              'relationships':[record(r) for r in session.scalars(select(Relationship).order_by(Relationship.id))],
-             'market_observations':[record(m) for m in session.scalars(select(MarketObservation).order_by(MarketObservation.id))]}
+             'market_observations':[]}
     logical=json.dumps(package, sort_keys=True,separators=(',',':'),allow_nan=False).encode()
     package['build_hash']=hashlib.sha256(logical).hexdigest()
     return package

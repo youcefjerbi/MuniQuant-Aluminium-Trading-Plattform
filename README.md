@@ -1,26 +1,28 @@
 # MuniQuant Aluminium Platform
 
-An evidence-first industrial and market-data workspace built with **Python, C++17, and PostgreSQL**, with a responsive web interface.
+An evidence-first industrial evidence workspace built with **Python, C++17, and PostgreSQL**, with a responsive web interface.
 
 Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operational instructions are in [the runbook](docs/RUNBOOK.md).
 
-## Charts and paper trading
+## Authoritative scope and release status
 
-Open **Charts & trading** for candlestick/line charts, volume, simulated stock orders, calls and puts, limits, positions and P/L. Start with $100,000 of paper cash and advance the synthetic replay one session at a time. See [paper-trading rules](docs/PAPER_TRADING.md). Prices are fictional and there is no real-money execution.
+This delivery follows **12 week Project Plan V01 (2)**: industrial evidence acquisition only. Market and paper-trading APIs/screens are removed. Historical database tables are retained to preserve migration history; no market records are exported. Gate 1 architecture approval is pending before large implementation. This is a scope-corrected pilot, not a completed v1 release.
+
+Review [Gate 1 architecture](docs/ARCHITECTURE.md), [ERD](docs/ERD_v0.1.md), [source taxonomy](docs/SOURCE_TAXONOMY_v0.1.md), [dictionary](docs/DATA_DICTIONARY_v0.1.md), and [backlog](docs/BACKLOG.md).
+Reports: [Software Engineer 1](docs/reports/software-engineer-1.md), [Software Engineer 2](docs/reports/software-engineer-2.md), [Project Manager](docs/reports/project-manager.md). Each covers all twelve requirement weeks and separates existing implementation from future work.
 
 ## Working features
 
 - Industrial asset and company register, aliases, sourced ownership/operator relationships.
-- Historical capacity and operating-status observations, explicit units and C++ normalization.
-- Distinct market instruments, futures contracts, prompt dates, price types, source currencies and provenance.
+- Historical capacity and operating-status observations, explicit units and Python normalization.
 - Source registry, exact UTF-8 evidence snapshots, SHA-256 integrity checks and document versions.
 - Atomic capacity CSV import; deterministic matching and an audited human-review queue.
 - Machine-readable validation, quality warnings, acquisition manifests.
 - Schema-validated JSON export and frozen evidence bundles with verified restore.
-- Browser screens for overview, assets, markets, evidence, resolution, and quality.
+- Browser screens for overview, assets, evidence, resolution, and quality.
 - Alembic migrations, automated tests, PostgreSQL CI and Docker configuration.
 
-**Status: v0.1 working pilot.** Included fixtures are explicitly fictional. This is not a live-price feed, a trading execution system, or the completed twelve-week production release. Remote acquisition, PDF parsing, licensed feeds, individual user authentication, and broader data curation are tracked in [the backlog](docs/BACKLOG.md).
+**Status: v0.1 working pilot.** Included fixtures are explicitly fictional. This is not a live-price feed, a trading execution system, or the completed twelve-week production release. Remote acquisition, PDF parsing, individual user authentication, and broader data curation are tracked in [the backlog](docs/BACKLOG.md).
 
 ## Start locally
 
@@ -72,7 +74,7 @@ A freeze output must not already exist. See the runbook for restoring into a fre
 ```text
 app/                 Python API, domain services, schemas, bundle tooling
 app/static/          Browser interface (no separate Node build required)
-cpp/                 C++17 normalization and Unicode edit-distance kernels
+cpp/                 C++17 Unicode edit-distance candidate-ranking kernel
 migrations/          Versioned Alembic database schema
 scripts/             Draft export-schema generation
 tests/              Native, API, integrity and reproducibility tests
