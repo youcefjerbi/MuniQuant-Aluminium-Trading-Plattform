@@ -1,23 +1,28 @@
 # Validation — 2026-10-10
 
-Baseline 0ed0c17, scope correction branch codex/upstream-evidence-gate1.
+Baseline 0ed0c17; branch codex/upstream-evidence-gate1; PR #2. Scope implementation approved by sponsor.
 
-| Check | Actual result |
+| Check | Actual evidence |
 |---|---|
-| Install pinned requirements and editable package | Pass on macOS / Python 3.14; C++17 extension compiles |
-| pytest -q | 18 passed, one Starlette/httpx deprecation warning |
-| Unit/API fixtures | Pass: Python capacity conversion, native Unicode name distance, authorization, document dedup/version, append-only history, invalid facts, ambiguity/review audit, atomic/sequential-idempotent CSV, source access, FK, UI headers, export integrity/determinism, frozen stored-output restoration |
-| Upstream boundary regression | Pass: market API absent, no market/trading OpenAPI routes, no market workspace payload, empty draft market export, removed navigation and unavailable trading script |
-| Alembic upgrade → check → downgrade base → upgrade → check | Commands pass on SQLite; no schema diff detected; WARNING: legacy SQLite batch downgrade omits unnamed observation CHECK constraints (known integrity risk, not clean production migration proof) |
-| Generated export schema | Unchanged after scripts/export_schema.py |
-| JavaScript syntax | node --check app/static/app.js passes |
-| Whitespace diff check | git diff --check passes |
-| PostgreSQL / Docker | Not run locally: installed Docker CLI cannot connect to stopped daemon |
-| Remote CI | Outcome not assumed; inspect PR checks |
-| Real source acquisition / PDF extraction / full UAT / frozen-input parser rerun | Not implemented or demonstrated; synthetic/local fixtures only |
+| Local suite | 61 passed on macOS / Python 3.14; one Starlette/httpx deprecation warning |
+| PostgreSQL and SQLite CI | 59-test implementation commit 56cfa78 passes both database jobs, migration round trips, schema checks and PostgreSQL container runtime/seed/freeze/replay/export smoke; follow-up release checks linked below |
+| Exact values/dimensions | Decimal 24 integer / 6 fractional digits, t/kt/Mt per year, MW, percentage, status; invalid/nonfinite/negative/unit/date facts rejected |
+| Master/resolution | Controlled references, company matching, audited aliases/supersession; 50 difficult names preserve ambiguity |
+| Review/auth | Final immutable audited decisions create candidate facts/aliases; newly verified candidates can be attached; individual writers and optional read-only credentials tested |
+| Acquisition | Real official URLs captured; mocked TLS/public-IP pin/redirect/size/retry policy fixtures; durable retrieval and parser-failure manifests |
+| Adapters | Configurable HTML/PDF/CSV; original binary PDF retained and exact page locator; status CSV replay and bad-status tests |
+| Quality/boundary | Missing/corrupt provenance, bad dimensions, conflicts/ambiguity fail or warn predictably; all ten prohibited fields rejected; active market/trading routes absent |
+| Reproducibility | Real frozen bundle re-extracts three candidates/builds, equivalent build hash; zero manually entered facts; tamper/missing-output tests reject |
+| Load/concurrency/migrations | 500 labelled synthetic facilities/facts import/export; pagination; concurrent duplicate imports retain one build/fact; populated legacy migration preserves high-precision source value/ID/hash/alias |
+| Consumer | Independent example validates closed schema and traces source/document/locator without database or private downstream code |
+| UI | Browser preview verified real 15-facility overview and Portland sourced capacity; JavaScript syntax check passes; quality/read-token/download/value display synchronized with backend |
+| Local Docker | Daemon stopped; no local container runtime result claimed |
+| Recommended real coverage | 15 facilities / three families; recommended 50–100 / 5–10 not yet achieved; capacity data covers two facilities only |
 
-CI now sets DATABASE_URL to PostgreSQL for the PostgreSQL migration round-trip job; previously both migration checks used SQLite. This configuration change is not itself proof of PostgreSQL success.
+Verified earlier implementation CI: https://github.com/youcefjerbi/MuniQuant-Aluminium-Trading-Plattform/actions/runs/38086256889 . Follow-up CI includes coordinated PostgreSQL dump/snapshot restore equivalence; its final result is recorded in the delivered validation artifact, not assumed here before completion.
 
-Legacy observation CHECK constraints must be named/restored through migration before production acceptance. alembic check alone does not prove CHECK-constraint integrity. Candidate equivalence from bundle restore is not evidence of acquisition/parser rerun reproducibility. Real data coverage has not been measured or fabricated.
+Real pilot: ten registered document versions from seven configured official URLs, five companies, 15 facilities across three countries, three parsed capacity records and four owner/operator relations. Quality WARN: 13 findings, no BLOCK/ERROR. Publication dates are unknown for eight documents and five company identity records lack explicit identity locators. No metadata invented to make quality PASS.
 
-No Gate 1–6 approval, completed twelve-week delivery, production release or downstream integration is claimed.
+Frozen hash: 415879f2f8a9c5feae9f966947f9be1765b3dd1bb9d490141d7294296edf59e2. Native microbenchmark verified equal output, 1,000 Unicode pairs, measured 58.75× speedup; no whole-pipeline performance claim.
+
+Human meetings, actual 360 person-hours, operational SLA attainment, private consumer sign-off, final sponsor acceptance and production certification are not fabricated. Raw publisher snapshots are retained in local deliverables, not uploaded to this public repository.

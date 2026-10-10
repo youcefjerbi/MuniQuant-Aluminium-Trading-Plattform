@@ -14,7 +14,7 @@ README.md contains complete local and Docker instructions. Install pinned depend
 | READ_TOKEN | Optional read-only bearer credential; cannot authorize writes |
 | POSTGRES_PASSWORD | Compose database secret; use independent URL-safe generated hexadecimal string |
 
-Use environment/ignored .env for secrets. Compose loads .env; ordinary Python does not. The UI retains the credential only in memory until reload. If protected reads are enabled, enter a read/write credential in Workspace access to load data. Direct snapshot download links require an authenticated gateway or an authorized HTTP request with bearer header. TLS/private ingress, rotation and identity-provider integration are deployment-owner controls. Compose exposes only loopback port 8000, not the database.
+Use environment/ignored .env for secrets. Compose loads .env; ordinary Python does not. The UI retains the credential only in memory until reload. If protected reads are enabled, enter a read/write credential in Workspace access to load data. UI snapshot/schema downloads send the in-memory bearer credential, including for read-only access. Direct API requests require the bearer header when protected reads are enabled. TLS/private ingress, rotation and identity-provider integration are deployment-owner controls. Compose exposes only loopback port 8000, not the database.
 
 ## Source onboarding
 

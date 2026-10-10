@@ -98,6 +98,11 @@ def create_app(database_url=None, storage=None, write_token=None):
         from .models import Candidate,EvidenceBuild,RetrievalAttempt
         models.update({'candidates':Candidate,'builds':EvidenceBuild,'retrieval_attempts':RetrievalAttempt})
         result={name:[record(o) for o in s.scalars(select(model).order_by(model.id).limit(1000)).all()] for name,model in models.items()}
+        from .models import ObservationDetail
+        details={detail.observation_id:detail for detail in s.scalars(select(ObservationDetail))}
+        for observation in result['observations']:
+            detail=details.get(observation['id'])
+            observation['exact_normalized_value']=str(detail.normalized_value) if detail and detail.normalized_value is not None else None
         result['workspace_limit']=1000
         return result
 
