@@ -143,3 +143,25 @@ def test_unsafe_legacy_migration_fails_before_ddl(client,example):
         connection.execute(text("UPDATE observations SET reported_value='400' WHERE id=:id"),{'id':obs['id']})
     command.upgrade(Config('alembic.ini'),'head')
     assert client.get('/api/export').status_code==200
+
+def test_contract_rejects_inconsistent_identity_metadata(client,example):
+    from app.contract import validate_package
+    from app.pipeline import logical_hash
+    import pytest
+    entity,_,doc,_=example
+    client.post('/api/observations',json={'entity_id':entity['id'],'document_id':doc['id'],'reported_value':'400','reported_unit':'kt/year','valid_from':'2025-01-01','evidence_reference':'table 1'})
+    package=client.get('/api/export').json();package['records'][0]['canonical_name']='Incorrect identity copy'
+    package['build_hash']=logical_hash({k:v for k,v in package.items() if k!='build_hash'})
+    with pytest.raises(ValueError,match='identity differs'): validate_package(package)
+
+def test_rejected_build_still_exports_input_provenance_and_replays(client,example,tmp_path):
+    from app.contract import freeze_v1,replay_v1
+    _,_,_,payload=example
+    doc=client.post('/api/documents',json={**payload,'content':'capacity 100 tonnes','media_type':'text/html'}).json()
+    spec={'adapter':'html-v1','facility_name':'Unknown Elsewhere','country':'AU','valid_from':'2025-01-01','prefix':'capacity','suffix':'tonnes','unit':'t/year'}
+    candidate=client.post('/api/documents/'+doc['id']+'/extract',json=spec).json()['candidates'][0]
+    assert client.post('/api/reviews/'+candidate['review_id']+'/decision',json={'selected_entity_id':None,'reason':'Evidence cannot identify a trusted site'}).status_code==200
+    package=client.get('/api/export').json()
+    assert not package['records'] and package['documents'][0]['document_id']==doc['id']
+    with Session(client.app.state.engine) as session: freeze_v1(session,client.app.state.storage,tmp_path/'rejected.zip')
+    assert replay_v1(tmp_path/'rejected.zip')['replayed_candidates']==1

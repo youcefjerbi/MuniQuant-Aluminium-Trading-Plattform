@@ -44,9 +44,30 @@ def validate_package(package):
     for item in [*package['records'],*package['relationships']]:
         doc=docs.get(item['document_id'])
         if not doc or doc['content_hash']!=item['content_hash'] or doc['source_id']!=item['source_id']: raise ValueError('Export provenance join is invalid')
-        if 'external_entity_id' in item and item['external_entity_id'] not in entities: raise ValueError('Observation entity is absent')
+        if 'external_entity_id' in item:
+            identity=entities.get(item['external_entity_id'])
+            if not identity or identity['entity_type']!='facility': raise ValueError('Observation entity is absent or not a facility')
+            for field in ('entity_type','canonical_name','aliases','facility_type','country','region','commodity'):
+                if item[field]!=identity[field]: raise ValueError('Observation identity differs from entity registry')
+            source=sources[item['source_id']]
+            if item['publisher']!=source['publisher'] or item['source_url']!=doc['original_url'] or item['published_at']!=doc['published_at'] or item['retrieved_at']!=doc['retrieved_at'] or item['synthetic']!=(source['source_type']=='synthetic'):
+                raise ValueError('Observation source metadata differs from registry')
+            if item['attribute_type']!='status':
+                value,unit=normalize_value(item['reported_value'],item['reported_unit'],item['attribute_type'])
+                if item['normalized_value']!=decimal_text(value) or item['unit']!=unit: raise ValueError('Export normalization mismatch')
+            elif item['reported_unit']!='status' or item['unit']!='status' or item['normalized_value'] is not None or item['reported_value'] not in ('operating','closed','suspended','planned','construction'):
+                raise ValueError('Invalid exported operational status')
+        if item['valid_to'] and item['valid_to']<item['valid_from']: raise ValueError('Invalid exported validity interval')
         if 'company_id' in item and (entities.get(item['company_id'],{}).get('entity_type')!='company' or entities.get(item['facility_id'],{}).get('entity_type')!='facility'):
             raise ValueError('Relationship identity types are invalid')
+    for identity in entities.values():
+        current=identity['external_entity_id'];seen=set()
+        while current:
+            if current in seen or current not in entities: raise ValueError('Invalid exported supersession chain')
+            seen.add(current);current=entities[current]['superseded_by']
+    for manifest in package['build_manifest']:
+        doc=docs.get(manifest['document_id'])
+        if not doc or doc['content_hash']!=manifest['content_hash']: raise ValueError('Build manifest input document is absent or inconsistent')
     for item in package['identity_evidence']:
         if item['external_entity_id'] not in entities or item['document_id'] not in docs: raise ValueError('Identity evidence is not traceable')
     content={k:v for k,v in package.items() if k!='build_hash'}
@@ -78,7 +99,7 @@ def export_v1(s,storage):
     for link in s.scalars(select(CompanyFacilityRelationship).order_by(CompanyFacilityRelationship.relationship_id)):
         doc=s.get(Document,link.document_id)
         relationships.append({'relationship_id':link.relationship_id,'company_id':link.company_id,'facility_id':link.facility_id,'role':link.role,'percentage':decimal_text(link.percentage),'valid_from':link.valid_from.isoformat(),'valid_to':link.valid_to.isoformat() if link.valid_to else None,'source_id':doc.source_id,'document_id':doc.id,'content_hash':doc.content_hash,'evidence_reference':link.evidence_reference})
-    doc_ids=sorted({r['document_id'] for r in records}|{r['document_id'] for r in relationships}|{r['document_id'] for r in identity_evidence})
+    doc_ids=sorted({r['document_id'] for r in records}|{r['document_id'] for r in relationships}|{r['document_id'] for r in identity_evidence}|{b.document_id for b in s.scalars(select(EvidenceBuild))})
     source_ids=sorted({s.get(Document,identifier).source_id for identifier in doc_ids})
     sources=[]
     for identifier in source_ids:
@@ -121,10 +142,22 @@ def replay_v1(target):
         candidates={c['id']:c for c in recipe['candidates']}
         reviews={r['id']:r for r in recipe['reviews']}
         entities={e['id']:e for e in recipe['entities']}
+        if len(candidates)!=len(recipe['candidates']) or len(reviews)!=len(recipe['reviews']) or len(entities)!=len(recipe['entities']): raise ValueError('Duplicate frozen registry identity')
+        if set(entities)!={identity['external_entity_id'] for identity in package['entities']}: raise ValueError('Frozen registry entity set differs')
+        for identity in package['entities']:
+            source=entities[identity['external_entity_id']]
+            expected={'entity_type':source['kind'],'canonical_name':source['name'],'aliases':sorted(source['aliases']),'facility_type':source['facility_type'],'country':source['country'],'region':source['region'],'commodity':source['commodity']}
+            if any(identity[field]!=value for field,value in expected.items()): raise ValueError('Frozen registry identity metadata differs')
+        manifests={manifest['build_id']:manifest for manifest in package['build_manifest']}
+        if set(manifests)!={build['id'] for build in recipe['builds']} or len(recipe['builds'])!=len(manifests): raise ValueError('Frozen build manifest set differs')
         frozen_records={r['record_id']:r for r in package['records']}
         checked_records=set()
         for build in recipe['builds']:
-            if build['parser_version']!=PARSER_VERSION: raise ValueError('Unsupported frozen parser version')
+            if build['parser_version']!=PARSER_VERSION or build['pipeline_version']!=VERSION: raise ValueError('Unsupported frozen parser/pipeline version')
+            manifest=manifests[build['id']]
+            if any(manifest[field]!=build[field] for field in ('document_id','content_hash','parser_version','pipeline_version','output_hash')): raise ValueError('Frozen build manifest differs')
+            expected_id=logical_hash({field:build[field] for field in ('document_id','content_hash','parser_version','pipeline_version')}|{'specification':build['specification']})
+            if build['id']!=expected_id: raise ValueError('Frozen build identity differs')
             spec=ExtractionIn.model_validate(build['specification']).model_dump(mode='json')
             raw=archive.read('snapshots/'+build['content_hash'])
             if hashlib_hash(raw)!=build['content_hash']: raise ValueError('Frozen snapshot integrity failure')
