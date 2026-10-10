@@ -183,7 +183,9 @@
           "attribute": {
             "enum": [
               "capacity",
-              "status"
+              "status",
+              "power",
+              "ownership_percentage"
             ]
           },
           "reported_value": {

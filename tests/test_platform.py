@@ -68,7 +68,7 @@ def test_csv_atomicity_and_idempotency(client,example):
     e,s,d,payload=example
     header='facility_name,country,reported_value,reported_unit,valid_from,evidence_reference\n'
     row='Test Works,NO,400,kt/year,2025-01-01,row 2\n'
-    data={**payload,'media_type':'text/csv','content':header+row+'Unknown,NO,10,kt/year,2025-01-01,row 3\n'}
+    data={**payload,'media_type':'text/csv','content':header+row+'Test Works,NO,-10,kt/year,2025-01-01,row 3\n'}
     bad=client.post('/api/documents',json=data).json()
     assert client.post('/api/import/csv',json={'document_id':bad['id']}).status_code==422
     assert not client.get('/api/workspace').json()['observations']
@@ -76,7 +76,7 @@ def test_csv_atomicity_and_idempotency(client,example):
     good=client.post('/api/documents',json=data).json()
     assert client.post('/api/import/csv',json={'document_id':good['id']}).json()['inserted']==1
     assert client.post('/api/import/csv',json={'document_id':good['id']}).json()['inserted']==0
-    assert client.get('/api/workspace').json()['observations'][0]['parser_version']=='capacity-csv-v1'
+    assert client.get('/api/workspace').json()['observations'][0]['parser_version']=='industrial-adapters-1.0.0'
 
 def test_export_determinism_and_corruption_detection(client,example):
     e,s,d,_=example
@@ -95,7 +95,8 @@ def test_upstream_boundary(client, example):
     paths = client.get('/openapi.json').json()['paths']
     assert not any('trading' in path or 'market' in path for path in paths)
     assert 'market' not in client.get('/api/workspace').json()
-    assert client.get('/api/export').json()['market_observations'] == []
+    assert 'market_observations' not in client.get('/api/export').json()
+    assert client.get('/api/export/draft').json()['market_observations'] == []
     html = client.get('/').text
     assert '#trading' not in html and '#market' not in html
     assert client.get('/static/trading.js').status_code == 404

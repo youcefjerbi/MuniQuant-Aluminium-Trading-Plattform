@@ -18,7 +18,7 @@ for key,model in models.items():
     if key=='observations':
         props['resolution_status']={'const':'resolved'}
         props['quality_status']={'enum':['PASS','WARN']}
-        props['attribute']={'enum':['capacity','status']}
+        props['attribute']={'enum':['capacity','status','power','ownership_percentage']}
     schema['properties'][key]={'type':'array','items':{'type':'object','additionalProperties':False,'properties':props,'required':list(props)}}
 schema['required']=list(schema['properties'])
 Path('app/package.schema.json').write_text(json.dumps(schema,indent=2)+'\n')

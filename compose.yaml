@@ -27,6 +27,9 @@ services:
       SNAPSHOT_DIR: /app/data/snapshots
       WRITE_TOKEN: ${WRITE_TOKEN:?Set WRITE_TOKEN in .env}
       WRITE_ACTOR: ${WRITE_ACTOR:-pilot-curator}
+      WRITE_IDENTITIES_JSON: ${WRITE_IDENTITIES_JSON:-}
+      REQUIRE_READ_AUTH: ${REQUIRE_READ_AUTH:-false}
+      READ_TOKEN: ${READ_TOKEN:-}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

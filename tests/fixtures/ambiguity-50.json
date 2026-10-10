@@ -1,0 +1,439 @@
+{
+  "description": "Deliberate test identities and aliases, including synthetic collisions. Not a curated public industrial dataset.",
+  "entities": [
+    {
+      "name": "Rio Tinto plc",
+      "kind": "company",
+      "country": "GB",
+      "aliases": [
+        "Rio Tinto"
+      ]
+    },
+    {
+      "name": "Boyne Smelters Ltd",
+      "kind": "facility",
+      "country": "AU",
+      "facility_type": "smelter",
+      "aliases": [
+        "Boyne Island Smelter",
+        "Boyne Smelter"
+      ]
+    },
+    {
+      "name": "Hydro Husnes",
+      "kind": "facility",
+      "country": "NO",
+      "facility_type": "smelter",
+      "aliases": [
+        "Husnes"
+      ]
+    },
+    {
+      "name": "Årdal Aluminium",
+      "kind": "facility",
+      "country": "NO",
+      "facility_type": "smelter",
+      "aliases": [
+        "Årdal Works"
+      ]
+    },
+    {
+      "name": "Alunorte",
+      "kind": "facility",
+      "country": "BR",
+      "facility_type": "refinery",
+      "commodity": "alumina",
+      "aliases": [
+        "Alunorte Refinery"
+      ]
+    },
+    {
+      "name": "North Works Norway",
+      "kind": "facility",
+      "country": "NO",
+      "facility_type": "smelter",
+      "aliases": [
+        "North Works"
+      ]
+    },
+    {
+      "name": "North Works Canada",
+      "kind": "facility",
+      "country": "CA",
+      "facility_type": "smelter",
+      "aliases": [
+        "North Works"
+      ]
+    },
+    {
+      "name": "Common Works A",
+      "kind": "facility",
+      "country": "AU",
+      "facility_type": "smelter",
+      "aliases": [
+        "Common Works"
+      ]
+    },
+    {
+      "name": "Common Works B",
+      "kind": "facility",
+      "country": "AU",
+      "facility_type": "smelter",
+      "aliases": [
+        "Common Works"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "raw_name": "Rio Tinto plc",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "RIO TINTO PLC",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "rio tinto plc",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "  Rio Tinto plc  ",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "Rio - Tinto - plc",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "Rio Tinto",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "RIO TINTO",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "Ｒｉｏ Ｔｉｎｔｏ ｐｌｃ",
+      "country": "GB",
+      "kind": "company",
+      "expected_status": "resolved",
+      "expected_name": "Rio Tinto plc"
+    },
+    {
+      "raw_name": "Boyne Smelters Ltd",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "BOYNE SMELTERS LTD",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "boyne smelters ltd",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "  Boyne Smelters Ltd  ",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "Boyne - Smelters - Ltd",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "Boyne Island Smelter",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "BOYNE ISLAND SMELTER",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "Ｂｏｙｎｅ Ｓｍｅｌｔｅｒｓ Ｌｔｄ",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Boyne Smelters Ltd"
+    },
+    {
+      "raw_name": "Hydro Husnes",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "HYDRO HUSNES",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "hydro husnes",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "  Hydro Husnes  ",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "Hydro - Husnes",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "Husnes",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "HUSNES",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "Ｈｙｄｒｏ Ｈｕｓｎｅｓ",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Hydro Husnes"
+    },
+    {
+      "raw_name": "Årdal Aluminium",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "ÅRDAL ALUMINIUM",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "årdal aluminium",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "  Årdal Aluminium  ",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "Årdal - Aluminium",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "Årdal Works",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "ÅRDAL WORKS",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "Åｒｄａｌ Ａｌｕｍｉｎｉｕｍ",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Årdal Aluminium"
+    },
+    {
+      "raw_name": "Alunorte",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "ALUNORTE",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "alunorte",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "  Alunorte  ",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "Alunorte",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "Alunorte Refinery",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "ALUNORTE REFINERY",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "Ａｌｕｎｏｒｔｅ",
+      "country": "BR",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "Alunorte"
+    },
+    {
+      "raw_name": "North Works",
+      "country": null,
+      "kind": "facility",
+      "expected_status": "ambiguous",
+      "expected_name": null
+    },
+    {
+      "raw_name": "North Works",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "North Works Norway"
+    },
+    {
+      "raw_name": "North Works",
+      "country": "CA",
+      "kind": "facility",
+      "expected_status": "resolved",
+      "expected_name": "North Works Canada"
+    },
+    {
+      "raw_name": "Common Works",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "ambiguous",
+      "expected_name": null
+    },
+    {
+      "raw_name": "COMMON-WORKS",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "ambiguous",
+      "expected_name": null
+    },
+    {
+      "raw_name": "Hydro Husnez",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "unresolved",
+      "expected_name": null
+    },
+    {
+      "raw_name": "Boyne Smelters Ldt",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "unresolved",
+      "expected_name": null
+    },
+    {
+      "raw_name": "No Such Facility",
+      "country": "AU",
+      "kind": "facility",
+      "expected_status": "unresolved",
+      "expected_name": null
+    },
+    {
+      "raw_name": "Alunorte",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "unresolved",
+      "expected_name": null
+    },
+    {
+      "raw_name": "Ardal Aluminium",
+      "country": "NO",
+      "kind": "facility",
+      "expected_status": "unresolved",
+      "expected_name": null
+    }
+  ]
+}

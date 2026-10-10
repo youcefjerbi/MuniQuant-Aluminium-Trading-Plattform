@@ -42,7 +42,25 @@ jobs:
           alembic downgrade base
           alembic upgrade head
       - name: Export schema stays in sync
-        run: python scripts/export_schema.py && git diff --exit-code app/package.schema.json
+        run: |
+          python scripts/export_schema.py
+          python scripts/export_v1_schema.py
+          git diff --exit-code app/package.schema.json app/evidence-v1.schema.json
       - name: Container build
         if: matrix.database == 'postgres'
         run: docker build -t muniquant:test .
+      - name: PostgreSQL container runtime and evidence smoke test
+        if: matrix.database == 'postgres'
+        run: |
+          docker run --name evidence-smoke --network host -d -e DATABASE_URL=postgresql+psycopg://test:test@localhost:5432/muniquant_test -e WRITE_TOKEN=ci-only-fixture-token muniquant:test
+          trap 'docker logs evidence-smoke; docker rm -f evidence-smoke' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/api/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/api/health
+          docker exec evidence-smoke python -m app.seed
+          docker exec evidence-smoke python -m app.evidence_cli freeze /app/data/ci-evidence.zip
+          docker exec evidence-smoke python -m app.evidence_cli replay /app/data/ci-evidence.zip
+          curl --fail --silent http://127.0.0.1:8000/api/export > /tmp/ci-package.json
+          python -c "import json; p=json.load(open('/tmp/ci-package.json')); assert p['package_version']=='1.0.0' and len(p['records'])==6"

@@ -1,0 +1,551 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "package_version": {
+      "const": "1.0.0"
+    },
+    "pipeline_version": {
+      "const": "1.0.0"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "external_entity_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entity_type": {
+            "const": "facility"
+          },
+          "canonical_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "facility_type": {
+            "type": "string",
+            "enum": [
+              "smelter",
+              "refinery",
+              "bauxite_mine"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "commodity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attribute_type": {
+            "type": "string",
+            "enum": [
+              "capacity",
+              "status",
+              "power",
+              "ownership_percentage"
+            ]
+          },
+          "reported_value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reported_unit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "normalized_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "t/year",
+              "MW",
+              "percentage",
+              "status"
+            ]
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date"
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "document_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "evidence_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "publisher": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resolution_status": {
+            "const": "resolved"
+          },
+          "quality_status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "WARN"
+            ]
+          },
+          "quality_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "parser_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pipeline_version": {
+            "const": "1.0.0"
+          },
+          "package_version": {
+            "const": "1.0.0"
+          }
+        },
+        "required": [
+          "record_id",
+          "external_entity_id",
+          "entity_type",
+          "canonical_name",
+          "aliases",
+          "facility_type",
+          "country",
+          "region",
+          "commodity",
+          "attribute_type",
+          "reported_value",
+          "reported_unit",
+          "normalized_value",
+          "unit",
+          "valid_from",
+          "valid_to",
+          "published_at",
+          "retrieved_at",
+          "source_id",
+          "document_id",
+          "content_hash",
+          "evidence_reference",
+          "source_url",
+          "publisher",
+          "resolution_status",
+          "quality_status",
+          "quality_codes",
+          "synthetic",
+          "parser_version",
+          "pipeline_version",
+          "package_version"
+        ]
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "external_entity_id": {
+            "type": "string"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "company",
+              "facility"
+            ]
+          },
+          "canonical_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "facility_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "smelter",
+              "refinery",
+              "bauxite_mine",
+              null
+            ]
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "commodity": {
+            "type": "string"
+          },
+          "superseded_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "external_entity_id",
+          "entity_type",
+          "canonical_name",
+          "aliases",
+          "facility_type",
+          "country",
+          "region",
+          "commodity",
+          "superseded_by"
+        ]
+      }
+    },
+    "identity_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "external_entity_id": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "evidence_reference": {
+            "type": "string",
+            "minLength": 3
+          },
+          "reviewer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "required": [
+          "external_entity_id",
+          "document_id",
+          "evidence_reference",
+          "reviewer",
+          "reason"
+        ]
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "relationship_id": {
+            "type": "string"
+          },
+          "company_id": {
+            "type": "string"
+          },
+          "facility_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNS",
+              "OPERATES"
+            ]
+          },
+          "percentage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date"
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "evidence_reference": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": [
+          "relationship_id",
+          "company_id",
+          "facility_id",
+          "role",
+          "percentage",
+          "valid_from",
+          "valid_to",
+          "source_id",
+          "document_id",
+          "content_hash",
+          "evidence_reference"
+        ]
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "publisher": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "access_status": {
+            "type": "string",
+            "enum": [
+              "permitted",
+              "synthetic"
+            ]
+          },
+          "access_notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "name",
+          "publisher",
+          "source_type",
+          "url",
+          "access_status",
+          "access_notes"
+        ]
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "original_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "media_type": {
+            "type": "string",
+            "enum": [
+              "text/plain",
+              "text/html",
+              "text/csv",
+              "application/pdf",
+              "application/json"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "storage_reference": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "document_id",
+          "source_id",
+          "title",
+          "original_url",
+          "media_type",
+          "version",
+          "published_at",
+          "retrieved_at",
+          "content_hash",
+          "storage_reference"
+        ]
+      }
+    },
+    "build_manifest": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "build_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parser_version": {
+            "type": "string"
+          },
+          "pipeline_version": {
+            "const": "1.0.0"
+          },
+          "output_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "build_id",
+          "document_id",
+          "content_hash",
+          "parser_version",
+          "pipeline_version",
+          "output_hash"
+        ]
+      }
+    },
+    "build_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "package_version",
+    "pipeline_version",
+    "records",
+    "entities",
+    "identity_evidence",
+    "relationships",
+    "sources",
+    "documents",
+    "build_manifest",
+    "build_hash"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/youcefjerbi/MuniQuant-Aluminium-Trading-Plattform/blob/main/app/evidence-v1.schema.json",
+  "title": "CommodityEvidencePackage v1 \u2014 upstream industrial evidence"
+}
