@@ -5,7 +5,7 @@ Baseline 0ed0c17; branch codex/upstream-evidence-gate1; PR #2. Scope implementat
 | Check | Actual evidence |
 |---|---|
 | Local suite | 62 passed on macOS / Python 3.14; one Starlette/httpx deprecation warning |
-| PostgreSQL and SQLite CI | 59-test implementation commit 56cfa78 passes both database jobs, migration round trips, schema checks and PostgreSQL container runtime/seed/freeze/replay/export smoke; follow-up release checks linked below |
+| PostgreSQL and SQLite CI | 62-test release implementation commit 26ade83 passes both database jobs, migration round trips, schema checks, PostgreSQL container runtime/seed/freeze/replay/export smoke and coordinated PostgreSQL/snapshot restore equivalence |
 | Exact values/dimensions | Decimal 24 integer / 6 fractional digits, t/kt/Mt per year, MW, percentage, status; invalid/nonfinite/negative/unit/date facts rejected |
 | Master/resolution | Controlled references, company matching, audited aliases/supersession; 50 difficult names preserve ambiguity |
 | Review/auth | Final immutable audited decisions create candidate facts/aliases; newly verified candidates can be attached; individual writers and optional read-only credentials tested |
@@ -19,7 +19,7 @@ Baseline 0ed0c17; branch codex/upstream-evidence-gate1; PR #2. Scope implementat
 | Local Docker | Daemon stopped; no local container runtime result claimed |
 | Recommended real coverage | 15 facilities / three families; recommended 50–100 / 5–10 not yet achieved; capacity data covers two facilities only |
 
-Verified earlier implementation CI: https://github.com/youcefjerbi/MuniQuant-Aluminium-Trading-Plattform/actions/runs/38086256889 . Follow-up CI includes coordinated PostgreSQL dump/snapshot restore equivalence; its final result is recorded in the delivered validation artifact, not assumed here before completion.
+Verified release implementation CI: https://github.com/youcefjerbi/MuniQuant-Aluminium-Trading-Plattform/actions/runs/38086988355 . All SQLite/PostgreSQL, migration, schema, container and coordinated recovery checks passed at 26ade83. Earlier implementation checks also passed at 56cfa78. One intermediate restore smoke failed on copied snapshot permissions; preserving appuser ownership fixed it and the final restore reproduced the exact package hash.
 
 Real pilot: ten registered document versions from seven configured official URLs, five companies, 15 facilities across three countries, three parsed capacity records and four owner/operator relations. Quality WARN: 13 findings, no BLOCK/ERROR. Publication dates are unknown for eight documents and five company identity records lack explicit identity locators. No metadata invented to make quality PASS.
 
