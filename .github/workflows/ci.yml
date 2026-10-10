@@ -41,6 +41,11 @@ jobs:
           alembic check
           alembic downgrade base
           alembic upgrade head
+      - name: Bundled demo database restore
+        if: matrix.database == 'sqlite'
+        run: |
+          python scripts/restore_demo.py
+          DATABASE_URL=sqlite:///data/demo.db alembic check
       - name: Export schema stays in sync
         run: |
           python scripts/export_schema.py

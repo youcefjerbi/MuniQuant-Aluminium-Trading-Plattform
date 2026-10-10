@@ -9,3 +9,9 @@ Real pilot: 15 facilities / five companies / three countries / three source fami
 Hardening evidence includes a 50-name ambiguity benchmark, 500 labelled synthetic facilities/observations, concurrent import deduplication, high-precision populated legacy migration, parser-failure logging and separate read-only/individual write credentials. Tests and validation outcomes are recorded in VALIDATION.md.
 
 Remaining: broader recommended real coverage, sourced ownership-change/closure/restart history, operational review cadence/SLA measurement, deployment-specific TLS/secret/backup-restore rehearsal and independent human acceptance. The release candidate does not assert final sponsor acceptance or certify shared production operations. Every PDF requirement maps to code/artifacts or an explicit organizational/coverage item in REQUIREMENTS_MATRIX.md.
+
+## Repository replacement delivery — 2026-10-11
+
+Removed obsolete paper-trading documentation, market ADR and unused trading styles. Added a complete fictional SQLite SQL dump, exact synthetic evidence snapshot and checksum manifest, with a restore command that refuses existing targets and verifies database integrity/references. PostgreSQL remains the shared deployment database, initialized with migrations and optional fixture seeding. Added the updated seven-minute natural-AI-narrated walkthrough, captions and exact practice instructions. Historical migrations remain for existing-database upgrades; no private database or third-party source copies were published.
+
+Validation: 64 local tests pass; restored demo serves seven entities (six facilities), six observations and its exact source snapshot; Alembic reports no schema drift; attempted overwrite is refused. CI also restores and checks the bundled demo database.

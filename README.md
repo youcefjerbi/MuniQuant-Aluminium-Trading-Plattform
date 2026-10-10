@@ -12,6 +12,8 @@ The real-source pilot registers **15 facilities, five companies, three publisher
 
 Reports: [Software Engineer 1](docs/reports/software-engineer-1.md), [Software Engineer 2](docs/reports/software-engineer-2.md), [Project Manager](docs/reports/project-manager.md). All cover twelve requirement weeks and distinguish implemented work, evidence and remaining acceptance work. They do not claim twelve elapsed weeks.
 
+The complete replacement includes a [ready-to-restore fictional database and evidence snapshots](fixtures/demo/README.md), plus a [seven-minute narrated walkthrough](docs/demo/walkthrough.mp4), [captions](docs/demo/walkthrough.srt) and [exact practice instructions](docs/demo/walkthrough.md). The video uses a natural AI narrator and animated cursor over actual platform screens. PostgreSQL schema and migrations are included; deployment credentials are configured locally.
+
 ## Working features
 
 - Controlled company/facility masters, countries, regions, commodities, relational aliases, audited supersession and sourced ownership/operator relationships.

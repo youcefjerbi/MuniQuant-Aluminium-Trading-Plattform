@@ -1,0 +1,341 @@
+1
+00:00:00,250 --> 00:00:01,701
+Welcome to MuniQuant.
+
+2
+00:00:02,101 --> 00:00:07,157
+This walkthrough uses a separate training workspace with fictional
+industrial data.
+
+3
+00:00:07,557 --> 00:00:11,973
+Follow the animated cursor and pause whenever you need to enter a
+form.
+
+4
+00:00:12,373 --> 00:00:17,919
+The platform preserves industrial evidence, facility identities and
+review decisions.
+
+5
+00:00:20,250 --> 00:00:22,255
+First, click Workspace access.
+
+6
+00:00:22,655 --> 00:00:27,541
+Enter the write token configured for your own server, then click
+Enable editing.
+
+7
+00:00:27,941 --> 00:00:33,359
+The masked token shown here belongs only to this disposable local
+training workspace.
+
+8
+00:00:33,759 --> 00:00:35,850
+Reloading the page clears the token.
+
+9
+00:00:38,183 --> 00:00:41,661
+Open Sources and evidence, then click Register source.
+
+10
+00:00:42,061 --> 00:00:45,133
+Register the publisher before capturing a document.
+
+11
+00:00:45,533 --> 00:00:54,002
+For practice we will create a clearly labelled synthetic source;
+real work should use the actual publisher and its source URL.
+
+12
+00:00:56,317 --> 00:00:59,026
+Enter the source name, publisher and URL.
+
+13
+00:00:59,426 --> 00:01:05,805
+Select Synthetic as the source type and Synthetic fixture as its
+access status for this exercise.
+
+14
+00:01:06,205 --> 00:01:08,957
+Add a note explaining that the content is fictional.
+
+15
+00:01:09,357 --> 00:01:10,637
+Click Save record.
+
+16
+00:01:12,983 --> 00:01:14,349
+Click Paste evidence.
+
+17
+00:01:14,749 --> 00:01:21,191
+Select the training source, enter the document title, original URL
+and known publication date.
+
+18
+00:01:21,591 --> 00:01:25,495
+Choose text slash HTML and paste this fictional fact sheet.
+
+19
+00:01:25,895 --> 00:01:33,447
+It reports annual capacity of one hundred twenty five kilotonnes,
+effective January first, twenty twenty five.
+
+20
+00:01:33,847 --> 00:01:38,050
+Save record preserves the exact pasted bytes and their fingerprint.
+
+21
+00:01:40,383 --> 00:01:50,026
+Open the document title to check its publisher, publication date,
+retrieval time, original URL and SHA two fifty six fingerprint.
+
+22
+00:01:50,426 --> 00:01:54,117
+Download exact snapshot gives you the preserved source bytes.
+
+23
+00:01:54,517 --> 00:01:57,397
+Inspect the source before interpreting any numbers.
+
+24
+00:01:59,717 --> 00:02:02,618
+Open Industrial assets and click Add asset.
+
+25
+00:02:03,018 --> 00:02:09,311
+Enter Training Smelter as the canonical name, choose Facility,
+Smelter, Norway and Aluminium.
+
+26
+00:02:09,711 --> 00:02:12,698
+Enter a region and only verified aliases.
+
+27
+00:02:13,098 --> 00:02:15,125
+We leave aliases empty for now.
+
+28
+00:02:15,525 --> 00:02:20,730
+Save the identity once; avoid duplicate records for the same
+physical facility.
+
+29
+00:02:23,050 --> 00:02:26,442
+Open the facility and click Record identity evidence.
+
+30
+00:02:26,842 --> 00:02:36,698
+Select the fact sheet, give an exact locator such as the heading and
+first paragraph, and explain how it supports the name, geography and
+facility class.
+
+31
+00:02:37,098 --> 00:02:38,378
+Click Save record.
+
+32
+00:02:38,778 --> 00:02:42,533
+Identity evidence is separate from a capacity observation.
+
+33
+00:02:44,850 --> 00:02:49,394
+Back in Sources and evidence, click Extract value beside the fact
+sheet.
+
+34
+00:02:49,794 --> 00:02:52,653
+Enter Training Smelter and country code N O.
+
+35
+00:02:53,053 --> 00:02:55,634
+Choose Capacity and kilotonnes per year.
+
+36
+00:02:56,034 --> 00:03:00,770
+Use the source supported effective date, January first, twenty
+twenty five.
+
+37
+00:03:01,170 --> 00:03:05,522
+Enter annual capacity of before the number and kilotonnes after it.
+
+38
+00:03:05,922 --> 00:03:09,762
+Save record runs the extraction; it does not invent a fact.
+
+39
+00:03:12,117 --> 00:03:13,845
+Open Training Smelter again.
+
+40
+00:03:14,245 --> 00:03:26,149
+The observation history now shows the reported value of one hundred
+twenty five kilotonnes per year, normalized to one hundred twenty
+five thousand tonnes per year, with its effective date.
+
+41
+00:03:26,549 --> 00:03:30,453
+This exact name matched the registered identity automatically.
+
+42
+00:03:30,853 --> 00:03:33,391
+Check the unit and source before proceeding.
+
+43
+00:03:35,717 --> 00:03:37,722
+Open Resolution and review.
+
+44
+00:03:38,122 --> 00:03:42,666
+Exact names and verified aliases can resolve deterministically.
+
+45
+00:03:43,066 --> 00:03:45,370
+Similar names are only suggestions.
+
+46
+00:03:45,770 --> 00:03:50,229
+This training workspace includes an unresolved Bay aluminium entry.
+
+47
+00:03:50,629 --> 00:03:57,967
+Click Review candidates and compare the suggested identity with the
+underlying evidence before making a decision.
+
+48
+00:04:00,317 --> 00:04:06,631
+Here the available evidence cannot distinguish the candidates, so
+keep Reject, no suitable match.
+
+49
+00:04:07,031 --> 00:04:09,399
+Enter the reason and click Save record.
+
+50
+00:04:09,799 --> 00:04:13,725
+If evidence supports a candidate, select that identity instead.
+
+51
+00:04:14,125 --> 00:04:18,093
+Decisions are final and attributed to the configured curator.
+
+52
+00:04:18,493 --> 00:04:27,517
+A standalone name review records a decision; accepting an extracted
+candidate also creates its observation and audited alias.
+
+53
+00:04:29,850 --> 00:04:32,367
+Open Data quality before exporting.
+
+54
+00:04:32,767 --> 00:04:35,327
+Read each finding and its remediation.
+
+55
+00:04:35,727 --> 00:04:43,258
+Our new facility has identity evidence, but the seeded example
+company still lacks its own locator, producing a warning.
+
+56
+00:04:43,658 --> 00:04:46,005
+Warnings remain visible in the package.
+
+57
+00:04:46,405 --> 00:04:49,967
+Blocking findings prevent export and must be resolved.
+
+58
+00:04:52,317 --> 00:04:55,943
+Click Verify frozen replay beside the extraction build.
+
+59
+00:04:56,343 --> 00:05:02,338
+The server reruns the versioned parser against the preserved
+snapshot and checks equivalent candidates.
+
+60
+00:05:02,738 --> 00:05:06,151
+The confirmation here reports one equivalent candidate.
+
+61
+00:05:06,551 --> 00:05:13,911
+This verifies extraction reproducibility; it does not independently
+certify that the industrial claim is true.
+
+62
+00:05:16,250 --> 00:05:18,298
+Click Export version one package.
+
+63
+00:05:18,698 --> 00:05:23,690
+A successful validation downloads commodity evidence package dot
+JSON.
+
+64
+00:05:24,090 --> 00:05:31,023
+The package carries the source references, fingerprints, dates,
+exact numeric values and quality findings.
+
+65
+00:05:31,423 --> 00:05:37,034
+Use Download contract schema if another application needs the formal
+data structure.
+
+66
+00:05:37,434 --> 00:05:40,207
+This training export contains fictional data.
+
+67
+00:05:42,517 --> 00:05:50,325
+For real evidence, register the actual publisher and leave access as
+Review required until you have checked permitted use.
+
+68
+00:05:50,725 --> 00:05:59,663
+Click Review access, enter the approved exact hostnames, access
+basis and retention policy, then select the justified decision.
+
+69
+00:06:00,063 --> 00:06:07,103
+This form is shown for instruction only; we are not granting a real
+publisher permission in this training exercise.
+
+70
+00:06:09,450 --> 00:06:13,695
+After a real source has a permitted policy, click Retrieve URL.
+
+71
+00:06:14,095 --> 00:06:21,007
+Choose that source, paste the exact document URL and title, and
+enter a publication date only when known.
+
+72
+00:06:21,407 --> 00:06:24,138
+Save record retrieves and preserves the bytes.
+
+73
+00:06:24,538 --> 00:06:30,682
+Our synthetic source is deliberately absent from this permitted
+source list, so we do not submit this form.
+
+74
+00:06:32,983 --> 00:06:46,338
+Your routine is: register the source, preserve the document,
+register the facility, link identity evidence, extract the value,
+review uncertain matches, check quality, verify replay and export.
+
+75
+00:06:46,738 --> 00:06:50,258
+Pause this video to copy the demonstrated training entries.
+
+76
+00:06:50,658 --> 00:06:53,645
+For real work, use source supported dates and facts.
+
+77
+00:06:54,045 --> 00:06:57,991
+The accompanying transcript includes the exact practice values.
