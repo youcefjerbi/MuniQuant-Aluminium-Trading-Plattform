@@ -1,70 +1,61 @@
-# Operations and source onboarding
+# Deployment, source onboarding and recovery
 
-## Configuration
+## Setup
 
-| Variable | Default | Purpose |
-|---|---|---|
-| DATABASE_URL | sqlite:///./data/muniquant.db | SQLAlchemy connection URL; PostgreSQL uses postgresql+psycopg |
-| SNAPSHOT_DIR | data/snapshots | Persistent evidence directory |
-| WRITE_TOKEN | empty | Required bearer token for all writes; empty means read-only |
-| WRITE_ACTOR | local-curator | Server-controlled identity recorded for the pilot curator |
-| POSTGRES_PASSWORD | required in Compose | Database password; use URL-safe hexadecimal characters |
+README.md contains complete local and Docker instructions. Install pinned dependencies, build the C++ extension and run `alembic upgrade head` before starting the API. PostgreSQL is the deployment target; SQLite supports local demonstrations. Migration startup is explicit, never hidden in the API. Use a C++17 compiler for source builds; runtime containers need no compiler.
 
-Secrets belong in the environment or an ignored `.env` file. Python does not automatically read `.env`; Docker Compose does. Use TLS and organizational identity before exposing the API beyond localhost. The current workspace endpoint includes all records and audit metadata; it has no read authorization or pagination.
+| Variable | Purpose |
+|---|---|
+| DATABASE_URL | SQLAlchemy URL; default local SQLite, deployed postgresql+psycopg |
+| SNAPSHOT_DIR | Persistent content-addressed snapshot directory |
+| WRITE_TOKEN / WRITE_ACTOR | Single curator credential and recorded actor; absent token disables writes |
+| WRITE_IDENTITIES_JSON | JSON map of separate bearer credentials to reviewer identities; credentials must be unique and nonempty |
+| REQUIRE_READ_AUTH | `true` protects API reads except health; default `false` for loopback pilot |
+| READ_TOKEN | Optional read-only bearer credential; cannot authorize writes |
+| POSTGRES_PASSWORD | Compose database secret; use independent URL-safe generated hexadecimal string |
 
-## Health, logs and migrations
-
-`GET /api/health` checks database connectivity and reports the compiled native module version. Database schema is created only by `alembic upgrade head`; starting the API does not silently create tables. Run migrations once before starting service replicas. `alembic check` detects model/schema drift.
-
-Application request logs are JSON records with method, path, status and duration. Do not log tokens or uploaded content. Investigate failed acquisitions in the run manifest view. A 409 during concurrent document capture means a version/identity constraint conflict; reload and retry.
+Use environment/ignored .env for secrets. Compose loads .env; ordinary Python does not. The UI retains the credential only in memory until reload. If protected reads are enabled, enter a read/write credential in Workspace access to load data. Direct snapshot download links require an authenticated gateway or an authorized HTTP request with bearer header. TLS/private ingress, rotation and identity-provider integration are deployment-owner controls. Compose exposes only loopback port 8000, not the database.
 
 ## Source onboarding
 
-1. Record publisher, canonical URL, source category, access decision and notes.
-2. Confirm the right to acquire, retain and redistribute the material. Set permitted only after review; restricted and review-required sources cannot be captured.
-3. Capture the exact text/CSV/HTML/JSON content and original URL. Include the publication date when known. Current capture stores UTF-8 text; it does not claim to preserve original PDF binary bytes.
-4. Download the snapshot to verify it. Repeated identical content retains its document ID; changed content at the same source URL creates a new version.
-5. Register facility identity and aliases. Add the observation with the page/table/row/section locator.
-6. Inspect quality and export. Preserve original values even when normalized.
-
-## CSV ingestion
-
-Capture a document with content type `text/csv`, then choose Import CSV. Required header:
+1. Register publisher, source category, canonical URL and access/licensing notes. Prioritize official companies, then government/regulators/public bodies.
+2. Record an audited access decision with exact lowercase permitted hostnames, reviewed basis and retention/redistribution limitations. Only permitted policies can retrieve URLs. Later restriction revokes capture/export.
+3. Retrieve an explicit HTTPS URL from Sources & evidence or POST /api/acquire. Public-address pinning/TLS checks, redirect revalidation, 20-second timeouts, four redirects, three attempts and 10 MB limits apply. No general crawler or login bypass.
+4. Inspect metadata and download byte-exact evidence. Identical bytes at the same provenance retain the document ID; changed bytes create a new version. HTML/PDF/CSV bytes are preserved unchanged.
+5. Create controlled companies/facilities; record identity evidence with document ID and locator. Curate aliases and owner/operator relationships with dates and source locators. Unknown effective dates must be labelled capture/observation dates, not inferred historical dates.
+6. Configure an existing adapter: HTML/PDF use literal words before/after a number, reported unit, raw facility name/country and dates; PDF may restrict a page. CSV uses the headers below. Text PDFs only, maximum 200 pages; scanned documents require manual sourced facts or a future OCR adapter.
+7. Review ambiguous/unresolved candidates using REVIEW_POLICY.md. Register a missing facility then Add verified candidate; final acceptance persists the sourced observation and alias. Rejection remains auditable.
+8. Inspect machine-readable quality. Fix BLOCK/ERROR; document WARN consideration. Export v1 and trace a record to exact document/hash/locator.
 
 ```csv
-facility_name,country,reported_value,reported_unit,valid_from,evidence_reference
-Nordhaven Smelter,NO,420,kt/year,2025-01-01,row 2
+facility_name,country,reported_value,reported_unit,valid_from,valid_to,attribute,evidence_reference
+Synthetic Example,NO,420,kt/year,2025-01-01,,capacity,table 1
+Synthetic Example,NO,closed,status,2024-01-01,2024-12-31,status,section 2
 ```
 
-This example is synthetic. Facilities must already exist and resolve uniquely. All rows succeed together or none are persisted. Limit: 1000 rows, subject to the request-size limit. Supported capacity units: t/year, kt/year, Mt/year. A second sequential import of the same document is a no-op. Do not submit simultaneous imports of the same document until concurrency hardening is delivered.
+The rows above are fictional. Capacity units: t/year, kt/year, Mt/year; power: MW; ownership: percentage; operational status: operating/closed/suspended/planned/construction with status unit. Required CSV fields are name, country, reported value/unit, start date and evidence locator. Optional attribute defaults to capacity and optional end date to null. Maximum 1,000 rows/build. Invalid numeric/date/status rows leave no partial facts; failure logs remain. Valid unresolved rows enter review rather than becoming trusted. Duplicate builds are idempotent. Concurrent duplicates either reuse the build or return 409; refresh/retry after a conflict.
 
-If a name is ambiguous, review the candidates. Current review decisions are recorded but do not automatically create an alias or rewrite CSV rows. Correct the source mapping explicitly before retrying.
+## Logs, health and pagination
 
-## Evidence bundles and recovery
+GET /api/health checks database and native module. JSON request logs include method/path/status/duration without token/content. Runs and retrieval attempts expose successful, duplicate and failed captures; parser failures persist failed manifests without partial facts. GET /api/quality returns findings and coverage. The UI initially shows at most 1,000 rows/type; GET /api/records/{type}?offset=0&limit=100 paginates all supported register, fact, review, manifest and access records. `alembic check` checks schema drift; constraints also have direct SQL tests.
+
+## Freeze and independently verify
 
 ```sh
-python -m app.bundle freeze data/frozen.zip
-python -m app.bundle verify data/frozen.zip
+python -m app.evidence_cli export data/evidence-v1.json
+python -m app.evidence_cli freeze data/evidence-v1.zip
+python -m app.evidence_cli replay data/evidence-v1.zip
+python scripts/consume_evidence.py data/evidence-v1.json
 ```
 
-The bundle contains a schema-validated JSON package and hash-addressed snapshots. Verification checks package and snapshot hashes. Restore into an **empty** migrated database, with a separate snapshot directory:
+Output paths must not already exist. Freeze contains the closed package, recipes, identities, review decisions and snapshots; replay is offline, checks hashes and reruns versioned parsers. It reports manual facts separately as normalization-only verification. Source licensing still applies. These are evidence artifacts, not full operational backups. Legacy app.bundle stored-output tooling belongs to the earlier draft format; use evidence_cli for v1.
 
-```sh
-export DATABASE_URL=sqlite:///./data/restored.db
-export SNAPSHOT_DIR=./data/restored-snapshots
-alembic upgrade head
-python -m app.bundle restore data/frozen.zip
-```
+## Coordinated operational backup / restore
 
-Restore refuses a populated data-product database and checks that the reconstructed export equals the original. Bundle restore excludes reviews, acquisition runs and audit records. For full operational recovery, back up the entire database and snapshot volume together while writes are stopped. For PostgreSQL, use `pg_dump`/`pg_restore` and archive the evidence volume, then run a hash-verifying export after recovery. Test recovery before a production release.
+Stop application writes before capturing the database and snapshots. In Compose, stop `app` while leaving `db` running. Create a PostgreSQL custom-format dump and archive the evidence volume, preserving owner/permissions. For example, redirect `docker compose exec -T db pg_dump -U muniquant -d muniquant -Fc` into a new backup file. A stopped app prevents new observations pointing at snapshots outside the matching archive. Store dump and archive together with migration revision, SHA-256 checksums and date; treat them as private operational data.
 
-## Known pilot limits
+Restore into a separate fresh PostgreSQL deployment and separate evidence volume, never over the working database. Use pg_restore to that empty database, restore the matching evidence archive with appuser ownership, verify the migration revision, then run `alembic upgrade head`, `alembic check`, a hash-validating v1 export and frozen replay before enabling writes. A missing/corrupt snapshot must block export. Keep the original deployment until verification succeeds. For SQLite, use Python sqlite3 backup against the quiescent database and archive its matching snapshots. Rehearse this procedure in the actual deployment environment before shared production acceptance.
 
-- Single shared curator token, no individual users, no read authorization.
-- Local/pasted text acquisition and CSV parser; remote sources and binary PDF adapters remain planned.
-- Industrial evidence scope only; market/trading routes and screens removed.
-- No entity merges, observation corrections/supersession, or review-to-alias automation yet.
-- Conservative capacity-jump warning; no conflict adjudication or ownership-total validation.
-- Workspace reads return the complete pilot dataset; pagination is required for larger deployments.
-- ISO date/time strings and floating-point normalized capacities are initial implementation trade-offs.
-- Frozen bundles reproduce stored data products, not arbitrary parser re-extraction or the operational audit database.
+## Real demonstration and limits
+
+Use app.pilot with the separate database/storage settings in README.md. It captures Alcoa, Hydro and Rio Tinto publications, verifies 15 identities and extracts Portland/Husnes capacities. The Portland PDF page 2 has a mismatched Huntly header; page 1 alone supports extracted values/ownership. Company jurisdiction metadata needs additional source evidence. PDF/HTML publication dates may be unknown and warn. Three parsed records reflect two facility capacities and one document revision; ten document versions are preserved. Recommended broader dataset/source-family coverage remains work for curation, not a fabricated release claim.

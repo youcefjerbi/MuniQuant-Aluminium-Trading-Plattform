@@ -1,4 +1,4 @@
-# DATA_DICTIONARY_v0.1 — proposed
+# Implemented data dictionary — evidence contract 1.0.0
 
 | Field/domain | Meaning / invariant |
 |---|---|
@@ -21,6 +21,6 @@
 | quality_status | PASS/WARN/FAIL, derived from machine-readable findings |
 | severity | INFO/WARN/ERROR/BLOCK; BLOCK excludes candidate export |
 | pipeline_version / parser_version | Versioned acquisition and extraction transformations |
-| package_version | Draft until Gate 5; breaking frozen contract change increments version |
+| package_version | 1.0.0 frozen schema; breaking contract changes increment version |
 
-Baseline differs: one entities table, JSON aliases, string dates, capacity float, combined document/version and draft nested exports. These are explicitly implementation gaps, not fulfilled normalized-schema requirements.
+Legacy entities/observations/documents remain as compatibility records. Relational specialization/reference tables, observation_detail native dates and exact decimals, company_facility_relationship, audited source_access and document_version/snapshot linkage are implemented. Legacy float compatibility values are never the authoritative v1 numeric representation. See CONTRACT.md for every export field and ERD_v0.1.md for actual relationships. Country reference data is a controlled 28-country aluminium pilot registry; adding a country requires a governed reference migration, not an arbitrary UI string.

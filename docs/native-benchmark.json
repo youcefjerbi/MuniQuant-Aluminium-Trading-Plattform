@@ -1,0 +1,12 @@
+{
+  "python_version": "3.14.7",
+  "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "pairs": 1000,
+  "characters_per_name": 64,
+  "equivalent": true,
+  "seconds": {
+    "python": 0.2940673749999405,
+    "cpp": 0.005005042000448157
+  },
+  "speedup": 58.754227231981154
+}

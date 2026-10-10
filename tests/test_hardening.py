@@ -102,3 +102,26 @@ def test_separate_read_only_authorization(client):
     assert client.get('/api/workspace',headers={'Authorization':''}).status_code==401
     assert client.get('/api/workspace',headers={'Authorization':'Bearer read-only-fixture'}).status_code==200
     assert client.post('/api/entities',json={'name':'Unauthorized','country':'NO','facility_type':'smelter'},headers={'Authorization':'Bearer read-only-fixture'}).status_code==401
+
+def test_independent_consumer_understands_export_without_database(client,example,tmp_path):
+    import runpy
+    entity,_,doc,_=example
+    assert client.post('/api/observations',json={'entity_id':entity['id'],'document_id':doc['id'],'reported_value':'0.4','reported_unit':'Mt/year','valid_from':'2025-01-01','evidence_reference':'source table 1'}).status_code==201
+    package=tmp_path/'evidence.json';package.write_text(json.dumps(client.get('/api/export').json()))
+    consumer=runpy.run_path('scripts/consume_evidence.py')['consume']
+    result=consumer(package,'app/evidence-v1.schema.json')
+    assert result['records'][0]['value']=='400000'
+    assert result['records'][0]['locator']=='source table 1'
+    assert result['records'][0]['content_hash']==doc['content_hash']
+
+def test_status_csv_frozen_replay_and_bad_status_rejection(client,example,tmp_path):
+    from app.contract import freeze_v1,replay_v1
+    _,_,_,payload=example
+    csv='facility_name,country,reported_value,reported_unit,valid_from,valid_to,attribute,evidence_reference\nTest Works,NO,closed,status,2024-01-01,2024-12-31,status,row 2\nTest Works,NO,operating,status,2025-01-01,,status,row 3\n'
+    doc=client.post('/api/documents',json={**payload,'media_type':'text/csv','content':csv}).json()
+    response=client.post('/api/import/csv',json={'document_id':doc['id']})
+    assert response.status_code==200,response.text
+    with Session(client.app.state.engine) as session: freeze_v1(session,client.app.state.storage,tmp_path/'statuses.zip')
+    assert replay_v1(tmp_path/'statuses.zip')['replayed_candidates']==2
+    doc=client.post('/api/documents',json={**payload,'media_type':'text/csv','content':csv.replace('closed,status','invented,status')}).json()
+    assert client.post('/api/import/csv',json={'document_id':doc['id']}).status_code==422

@@ -9,3 +9,5 @@ Decision: keep API, I/O, transactions and orchestration in Python; use Python De
 Alternatives: all Python would simplify packaging but would not satisfy the requested native component; a separate C++ service and separate frontend service add deployment and protocol overhead.
 
 Consequences: one deployment and native integration tests; C++ compiler required for source builds. No performance claims without measurement. More native work requires profiling evidence.
+
+Measured evidence, 2026-10-10: seeded 1,000 pairs of 64-character Unicode names produced equal distances. Python 0.294067s, native 0.005005s, 58.75× speedup on this workstation. Raw result: docs/native-benchmark.json. This justifies the ranking kernel; Python retains all unit arithmetic.

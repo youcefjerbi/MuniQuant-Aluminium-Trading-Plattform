@@ -8,4 +8,4 @@ Decision: retain SHA-256-addressed source bytes, version documents by source and
 
 Alternatives: storing URLs alone loses revised evidence; overwriting latest values loses history; full bitemporal SQL is deferred until concrete queries require it.
 
-Consequences: database plus snapshot storage must be backed up together. Exports verify evidence bytes. ISO date strings are an initial portability choice; PostgreSQL-native temporal columns are a planned production migration.
+Consequences: database plus snapshot storage must be backed up together. Exports verify evidence bytes. ISO date strings are an initial portability choice; PostgreSQL-native dates and exact Decimal specialization records are now implemented; legacy ISO strings/floats remain compatibility representations.

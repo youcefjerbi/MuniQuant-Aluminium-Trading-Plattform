@@ -4,25 +4,26 @@ An evidence-first industrial evidence workspace built with **Python, C++17, and 
 
 Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operational instructions are in [the runbook](docs/RUNBOOK.md).
 
-## Authoritative scope and release status
+## Scope and delivery status
 
-This delivery follows **12 week Project Plan V01 (2)**: industrial evidence acquisition only. Market and paper-trading APIs/screens are removed. Historical database tables are retained to preserve migration history; no market records are exported. Gate 1 architecture approval is pending before large implementation. This is a scope-corrected pilot, not a completed v1 release.
+Implements the upstream-only **12 week Project Plan V01 (2)**. The sponsor approved implementation on 2026-10-10. The version 1.0.0 evidence contract is implemented; the application is a 1.0.0 release candidate. No trading signals, forecasts, recommendations or downstream proprietary logic are present in the active service. Legacy market tables remain solely to preserve migration history.
 
-Review [Gate 1 architecture](docs/ARCHITECTURE.md), [ERD](docs/ERD_v0.1.md), [source taxonomy](docs/SOURCE_TAXONOMY_v0.1.md), [dictionary](docs/DATA_DICTIONARY_v0.1.md), and [backlog](docs/BACKLOG.md).
-Reports: [Software Engineer 1](docs/reports/software-engineer-1.md), [Software Engineer 2](docs/reports/software-engineer-2.md), [Project Manager](docs/reports/project-manager.md). Each covers all twelve requirement weeks and separates existing implementation from future work.
+The real-source pilot registers **15 facilities, five companies, three publisher families**, three capacity observations from preserved document versions, and four sourced ownership/operator relationships. Capacity coverage is only two facilities. Broad final coverage (50–100 facilities / 5–10 families), independent consumer acceptance and shared-production operations remain open. See [validation](docs/VALIDATION.md) and [backlog](docs/BACKLOG.md).
+
+Reports: [Software Engineer 1](docs/reports/software-engineer-1.md), [Software Engineer 2](docs/reports/software-engineer-2.md), [Project Manager](docs/reports/project-manager.md). All cover twelve requirement weeks and distinguish implemented work, evidence and remaining acceptance work. They do not claim twelve elapsed weeks.
 
 ## Working features
 
-- Industrial asset and company register, aliases, sourced ownership/operator relationships.
-- Historical capacity and operating-status observations, explicit units and Python normalization.
-- Source registry, exact UTF-8 evidence snapshots, SHA-256 integrity checks and document versions.
-- Atomic capacity CSV import; deterministic matching and an audited human-review queue.
-- Machine-readable validation, quality warnings, acquisition manifests.
-- Schema-validated JSON export and frozen evidence bundles with verified restore.
-- Browser screens for overview, assets, evidence, resolution, and quality.
-- Alembic migrations, automated tests, PostgreSQL CI and Docker configuration.
+- Controlled company/facility masters, countries, regions, commodities, relational aliases, audited supersession and sourced ownership/operator relationships.
+- Append-only capacity/status/power/ownership facts with exact Decimal normalization, native dates and source locators.
+- Audited source access; HTTPS acquisition with checked/pinned public IPs, approved hosts, redirects, retries, limits and attempt logs.
+- Byte-exact HTML/PDF/CSV snapshots, SHA-256 content addressing and document version history.
+- Versioned configurable HTML/PDF/CSV extraction, deterministic candidate identities, ambiguity review and individually attributable write credentials.
+- INFO/WARN/ERROR/BLOCK quality findings, PASS/WARN/FAIL aggregation and blocked unsafe exports.
+- Closed CommodityEvidencePackage v1 schema; frozen parser-input replay and verified logical output equivalence.
+- Browser forms backed by actual APIs; migrations, PostgreSQL CI and a non-root Docker deployment.
 
-**Status: v0.1 working pilot.** Included fixtures are explicitly fictional. This is not a live-price feed, a trading execution system, or the completed twelve-week production release. Remote acquisition, PDF parsing, individual user authentication, and broader data curation are tracked in [the backlog](docs/BACKLOG.md).
+Python owns acquisition, parsing, transactions and unit conversion. C++ only ranks name candidates using Unicode edit distance. Its measured microbenchmark was 58.75× faster than equivalent Python; this is not an end-to-end throughput claim.
 
 ## Start locally
 
@@ -58,16 +59,32 @@ docker compose exec app python -m app.seed
 
 Open [the workspace](http://127.0.0.1:8000). The migration service runs before the app. PostgreSQL and snapshots have separate persistent volumes. Use `docker compose down` to stop without deleting data. Do not use `down -v` unless you intend to delete the database and evidence volumes.
 
-## Verify
+## Verify and freeze
 
 ```sh
 pytest -q
 alembic check
-python -m app.bundle freeze data/pilot-bundle.zip
-python -m app.bundle verify data/pilot-bundle.zip
+python scripts/export_v1_schema.py
+python -m app.evidence_cli export data/evidence-v1.json
+python -m app.evidence_cli freeze data/evidence-v1.zip
+python -m app.evidence_cli replay data/evidence-v1.zip
 ```
 
-A freeze output must not already exist. See the runbook for restoring into a fresh migrated database. Frozen bundles restore the data product and evidence, not review/audit history or a full operational database backup.
+Output files must not already exist. Replay is offline and re-extracts parser-produced records from preserved bytes. Manually entered facts receive normalization verification only; the result explicitly reports their count. Frozen bundles are evidence artifacts, not operational database backups.
+
+## Real-source demonstration
+
+Use a separate database and snapshot directory so fictional fixtures cannot mix with public-source evidence:
+
+```sh
+DATABASE_URL=sqlite:///data/real-pilot.db alembic upgrade head
+DATABASE_URL=sqlite:///data/real-pilot.db SNAPSHOT_DIR=data/real-pilot-snapshots \
+  python -m app.pilot --online --as-of 2026-10-10 --output data/real-pilot-export
+DATABASE_URL=sqlite:///data/real-pilot.db SNAPSHOT_DIR=data/real-pilot-snapshots \
+  uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+The online demonstration explicitly captures seven configured official publisher URLs. Live pages may change; use frozen replay to verify a previous capture. Undated facts use an observed-at date, not an inferred historical change date. Evidence links and limitations are described in [the runbook](docs/RUNBOOK.md).
 
 ## Project layout
 
@@ -76,7 +93,7 @@ app/                 Python API, domain services, schemas, bundle tooling
 app/static/          Browser interface (no separate Node build required)
 cpp/                 C++17 Unicode edit-distance candidate-ranking kernel
 migrations/          Versioned Alembic database schema
-scripts/             Draft export-schema generation
+scripts/             Contract generation and native benchmark
 tests/              Native, API, integrity and reproducibility tests
 docs/               Architecture, decisions, backlog and operations
 ```
@@ -90,4 +107,4 @@ docs/               Architecture, decisions, backlog and operations
 5. Try a facility alias under Resolution & review.
 6. Export a package from Data quality and verify its source/document references.
 
-Keep the service local until individual authentication and read authorization are implemented. No license for redistribution of third-party source data is implied by this repository.
+Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads are open by default on loopback. Enable REQUIRE_READ_AUTH and configure TLS/private ingress before shared deployment. No license for redistribution of third-party source data is implied by this repository.

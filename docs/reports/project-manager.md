@@ -1,100 +1,100 @@
 # Project Manager — Data Product & Delivery
 
-Status date: 2026-10-10. Week numbers allocate requirements; they are not twelve elapsed delivery weeks or a claim of 360 hours spent. Existing implementation predates this branch (baseline 0ed0c17). This branch adds scope correction, Gate 1 artifacts, CI migration targeting and local verification. No gate approval is assumed. The known remaining work below is planned, not implemented.
+Status: 2026-10-10. Sponsor authorized implementation. These are requirement-week allocations, not twelve elapsed weeks, meetings or 360 hours actually worked. Completed items refer to operational code and demonstrated artifacts. Remaining work and human acceptance are explicit.
 
 ## Week 1 — Discovery & Architecture
 
-- **Done / implemented:** Authoritative scope reconciled; architecture/ERD/taxonomy/dictionary/backlog authored.
-- **Evidence:** Gate 1 packet in docs/.
-- **Blockers / remaining:** Gate 1 pending. Planned work below remains incomplete.
-- **Decision required:** Sponsor approves ERD/source model/boundary.
-- **Next / planned:** Record Gate 1 approval before large implementation.
+- **Done / implemented:** Reconciled the authoritative PDF with existing code; recorded sponsor approval and upstream-only boundary.
+- **Evidence:** PDF pp.1–9 and 23–26; architecture, dictionary, taxonomy and backlog
+- **Blockers / remaining:** No additional scope approval is needed for this implementation.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 2; subsequent sections state the work actually delivered.
 
 ## Week 2 — Asset Master Foundation
 
-- **Done / implemented:** Fictional fixtures distinguished from real facility coverage.
-- **Evidence:** app/seed.py; tests/conftest.py.
-- **Blockers / remaining:** Fresh PostgreSQL deployment unverified. Planned work below remains incomplete.
-- **Decision required:** Choose source/facility pilot.
-- **Next / planned:** Curate 10–15 real facilities across countries/ownership structures.
+- **Done / implemented:** Curated 15 real facilities across Australia, Norway and Brazil, five companies and multiple facility classes.
+- **Evidence:** app/pilot.py; public publisher snapshots and identity locators
+- **Blockers / remaining:** Final 50–100 facility target is recommended and remains incomplete.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 3; subsequent sections state the work actually delivered.
 
 ## Week 3 — Source & Document Registry
 
-- **Done / implemented:** Source priority and governed onboarding procedure proposed.
-- **Evidence:** SOURCE_TAXONOMY_v0.1.md.
-- **Blockers / remaining:** Gate 2 real retrieval not passed. Planned work below remains incomplete.
-- **Decision required:** Approve per-source access/retention basis.
-- **Next / planned:** Register high-quality sources and witness real Gate 2 capture.
+- **Done / implemented:** Registered three official publisher families and audited bounded access/retention decisions.
+- **Evidence:** Alcoa, Hydro, Rio Tinto; seven configured URLs; ten preserved document versions
+- **Blockers / remaining:** Suggested 5–10 families remains a coverage expansion; no redistribution license claimed.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 4; subsequent sections state the work actually delivered.
 
 ## Week 4 — Capacity & Attribute Observations
 
-- **Done / implemented:** Temporal/dimensional QA requirements documented.
-- **Evidence:** DATA_DICTIONARY_v0.1.md.
-- **Blockers / remaining:** Historical baseline exists; dimensions incomplete. Planned work below remains incomplete.
-- **Decision required:** Approve unit/QA expected outcomes.
-- **Next / planned:** Curate changes, unit differences, source conflicts and ownership changes.
+- **Done / implemented:** Defined QA for capacity changes, unit equivalence, conflicting vintages, closures/restarts and sourced ownership intervals.
+- **Evidence:** tests/test_hardening.py; historical tests; Portland ownership evidence
+- **Blockers / remaining:** Real ownership-change and restart history requires additional curation.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 5; subsequent sections state the work actually delivered.
 
 ## Week 5 — Entity Resolution
 
-- **Done / implemented:** Manual ambiguity policy captured.
-- **Evidence:** ARCHITECTURE.md; ambiguity test.
-- **Blockers / remaining:** Gate 3 real facility demonstration pending. Planned work below remains incomplete.
-- **Decision required:** Approve labeled matches/escalations.
-- **Next / planned:** Create 50 difficult-name benchmark and witness Gate 3.
+- **Done / implemented:** Delivered a 50-case deliberately difficult-name benchmark with expected trusted/ambiguous/unresolved outcomes.
+- **Evidence:** tests/fixtures/ambiguity-50.json; automated benchmark passes
+- **Blockers / remaining:** Synthetic collision identities are labelled and do not count as real data.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 6; subsequent sections state the work actually delivered.
 
 ## Week 6 — Manual Review & Audit Trail
 
-- **Done / implemented:** Existing reviewed decisions inspected.
-- **Evidence:** review audit test.
-- **Blockers / remaining:** Individual reviewer identity missing. Planned work below remains incomplete.
-- **Decision required:** Adopt proposed 2-working-day triage SLA and domain-owner escalation.
-- **Next / planned:** Define categories/decision rules and accountable review owner.
+- **Done / implemented:** Defined review service target, ambiguity categories, decision rules and escalation; every accepted/rejected decision remains auditable.
+- **Evidence:** docs/REVIEW_POLICY.md; review workflow tests
+- **Blockers / remaining:** Service targets are proposed operating rules; no elapsed team SLA results invented.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 7; subsequent sections state the work actually delivered.
 
 ## Week 7 — Data Acquisition Adapters
 
-- **Done / implemented:** Source onboarding steps drafted.
-- **Evidence:** SOURCE_TAXONOMY_v0.1.md.
-- **Blockers / remaining:** Real HTML/PDF/CSV adapter set incomplete. Planned work below remains incomplete.
-- **Decision required:** Approve representative source families.
-- **Next / planned:** Onboard permitted HTML/PDF/CSV fixtures and maintenance owners.
+- **Done / implemented:** Documented repeatable source onboarding using source access and adapter configuration.
+- **Evidence:** RUNBOOK.md; three adapters and official real-source demonstration
+- **Blockers / remaining:** Check access, retention and locators for each new publisher.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 8; subsequent sections state the work actually delivered.
 
 ## Week 8 — Data Quality Engine
 
-- **Done / implemented:** Quality vocabulary/protected requirements documented.
-- **Evidence:** dictionary/backlog; bad-fixture tests.
-- **Blockers / remaining:** Gate 4 partial technical evidence only. Planned work below remains incomplete.
-- **Decision required:** Approve severity/remediation thresholds.
-- **Next / planned:** Measure findings/coverage and witness Gate 4 corrupt-fixture demo.
+- **Done / implemented:** Defined severity and remediation; reported real pilot WARN findings instead of claiming clean data.
+- **Evidence:** quality-findings.json: WARN, 13 warnings, no BLOCK/ERROR
+- **Blockers / remaining:** Five company identities lack identity locators; eight documents have unknown publication dates.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 9; subsequent sections state the work actually delivered.
 
 ## Week 9 — Evidence Versioning & Reproducibility
 
-- **Done / implemented:** Output restoration distinguished from acquisition replay.
-- **Evidence:** ARCHITECTURE.md; bundle test.
-- **Blockers / remaining:** Frozen-input parser rerun absent. Planned work below remains incomplete.
-- **Decision required:** Approve frozen inputs and equivalence definition.
-- **Next / planned:** Run same frozen inputs/version twice; compare logical output.
+- **Done / implemented:** Specified and ran the frozen-source reproducibility scenario.
+- **Evidence:** pilot-frozen-evidence.zip; replay equal build hash; three parsed records
+- **Blockers / remaining:** This is upstream evidence reproduction only.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 10; subsequent sections state the work actually delivered.
 
 ## Week 10 — Commodity Evidence Package v1
 
-- **Done / implemented:** Draft version retained; upstream-only boundary documented.
-- **Evidence:** ARCHITECTURE.md; package.schema.json.
-- **Blockers / remaining:** Gate 5 v1 freeze pending. Planned work below remains incomplete.
-- **Decision required:** Consumer/sponsor Gate 5 contract approval.
-- **Next / planned:** Publish field explanations and breaking-version policy.
+- **Done / implemented:** Published closed v1 field documentation and versioning policy; demonstrated an independent consumer.
+- **Evidence:** CONTRACT.md; schema; consumer-example.json
+- **Blockers / remaining:** No independent human consumer sign-off is fabricated.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 11; subsequent sections state the work actually delivered.
 
 ## Week 11 — Hardening & Integration Simulation
 
-- **Done / implemented:** Local validation evidence recorded without production claims.
-- **Evidence:** VALIDATION.md.
-- **Blockers / remaining:** PostgreSQL/Docker/full UAT not verified. Planned work below remains incomplete.
-- **Decision required:** Assign UAT owner and test environment.
-- **Next / planned:** End-to-end UAT and real coverage target 50–100 meaningful facilities.
+- **Done / implemented:** Ran the complete technical source-to-package workflow and negative/load/concurrency UAT.
+- **Evidence:** pilot-validation.json; tests; CI; UAT.md
+- **Blockers / remaining:** Manual operational usability acceptance and deployment-specific restore are distinct from automated checks.
+- **Decision required:** No implementation authorization pending; follow the documented governance policy.
+- **Next / planned:** Continue verification and artifacts for requirement week 12; subsequent sections state the work actually delivered.
 
 ## Week 12 — Final Release & Handover
 
-- **Done / implemented:** Three distinct reports and scope-corrected review branch prepared.
-- **Evidence:** docs/reports; README.md.
-- **Blockers / remaining:** Gate 6 final acceptance pending. Planned work below remains incomplete.
-- **Decision required:** Sponsor Gate 6 final acceptance.
-- **Next / planned:** Release notes/risks/roadmap/handover; target 5–10 verified source families.
+- **Done / implemented:** Delivered release notes, role reports, risk register, roadmap and handover.
+- **Evidence:** RELEASE_NOTES.md; RISKS.md; RUNBOOK.md; requirement matrix
+- **Blockers / remaining:** Sponsor’s final human handover acceptance is not fabricated; recommended coverage expansion remains open.
+- **Decision required:** Final sponsor handover acceptance remains a human decision.
+- **Next / planned:** Broader curation and operational deployment acceptance from the roadmap.
 

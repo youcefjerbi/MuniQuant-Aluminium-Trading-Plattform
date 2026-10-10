@@ -1,51 +1,27 @@
-# ARCHITECTURE_v0.1 — Gate 1 review
+# Architecture — approved implementation
 
-Date: 2026-10-10. Status: proposed; sponsor approval pending.
-Authoritative requirements: 12 week Project Plan V01 (2).pdf, pp. 1–27 (later pages repeat).
-This document supersedes the repository's earlier market-data and paper-trading scope extensions for this delivery.
+Status: sponsor authorized implementation on 2026-10-10 through the chat approval “i apporve on everythin that you do”. Requirements: 12 week Project Plan V01 (2).pdf, primary pages 1–28 (page 28 ends the original success criterion). Application release candidate 1.0.0rc1; evidence contract 1.0.0.
 
-## Boundary and decisions
+## Boundary
 
-Public/permitted source → registry → acquisition → exact raw snapshot → industrial asset master → entity resolution → attributed observations → quality → candidate export.
-Responsibility ends at CommodityEvidencePackage. No private downstream access, market predictions, sentiment, event scoring, impact/supply pressure models, analogue selection, recommendations, trading, or portfolio optimization.
+Permitted official source → audited access → bounded HTTPS capture → immutable byte snapshot → document version → versioned extraction → identity resolution → manual review when needed → dated industrial facts → quality → CommodityEvidencePackage v1. The responsibility ends at this package. Trading, predictions, recommendations, event impact and all prohibited downstream fields are excluded by a closed schema and recursive validation.
 
-Retain a modular Python FastAPI service with SQLAlchemy, Alembic, PostgreSQL and a minimal same-origin curator UI. Docker Compose deploys database, migration job and API; GitHub Actions tests SQLite and PostgreSQL, schema generation and container build. SQLite is a test/local convenience only.
+## Components
 
-Python owns HTTP, adapters, parsing, transactions, Decimal unit conversion, quality and exports. C++ is justified only for bounded O(m*n) edit-distance candidate ranking over many normalized names; it must never trust a fuzzy candidate automatically. Trivial unit multiplication now uses Python Decimal arithmetic (legacy storage still float). Benchmark name distance against Python before retaining the build burden for production; no speedup is claimed now.
+FastAPI and a same-origin static curator UI use SQLAlchemy and additive Alembic migrations. PostgreSQL is the deployment database; SQLite supports local use/tests. Normalized reference and specialization tables coexist with legacy entity IDs. Native date and exact Decimal specialization records are authoritative; legacy float fields are compatibility representations. Company-facility shares are exact and dated. Document versions link immutable snapshots; reviewed aliases and supersessions retain audit metadata.
 
-## Existing implementation and compatibility
+Python handles network, parsing, normalization, transactions, quality and export. The C++17 pybind11 component performs bounded Unicode edit distance only. A seeded 1,000-pair microbenchmark verified equivalent outputs and measured 58.75× speedup on this workstation. Unique exact/normalized/alias matches alone resolve automatically. Similarity is a review suggestion.
 
-Baseline commit: 0ed0c17. Existing entities/observations/sources/documents/relationships/reviews/runs/audit provide a working pilot. Dates are string columns, aliases JSON, document/version in one table. These are not the full week-2/3 normalized domain model. This branch removes market endpoints, workspace market data, charts/order application and navigation. The draft export retains an empty market_observations array for draft compatibility, never historical market rows. Old tables and migration history remain to avoid destructive data loss; archive/removal is a later reviewed migration.
+Retrieval requires an audited approved host list, HTTPS/public addresses, pinned checked IPs with TLS hostname verification, redirect revalidation, bounded bytes and retries with attempt logs. No general crawler. Raw bytes are content-addressed and written atomically. Literal extraction recipes avoid user-supplied regular expressions. PDF extraction is text-based and bounded, with no OCR. Source rights must be reviewed before redistribution.
 
-## Proposed schema and migration strategy
+## Integrity and reproducibility
 
-See ERD_v0.1 and DATA_DICTIONARY_v0.1. Incremental migrations must preserve existing IDs, exact source bytes, document links, observations and review decisions. Backfill native dates only after invalid legacy dates are identified; reject unsafe migrations. Split aliases/reference data into relational tables. Company/facility specializations retain stable external entity identity. Document versions and source access records are separate histories. Constraints include nonnegative values, known dimensional units, valid intervals and foreign keys; PostgreSQL migration round trips must run against PostgreSQL, not only SQLite.
+Relational foreign keys and range/date constraints complement application dimension checks. Quality findings carry code, severity, affected record and remediation. BLOCK/ERROR prohibit v1 export. Stable build/candidate identifiers and parser specifications permit offline re-extraction. SHA-256 verifies snapshots, recipes and packages. Manual facts are explicitly reported as normalization-only verification.
 
-## Acquisition and evidence
+The closed v1 schema rejects unknown fields. Exact numeric values are decimal strings so consumers cannot silently lose precision. Sources, documents, entities, identity evidence and relationships have validated references. Breaking changes require a contract version increase. Legacy draft exports and stored-output bundle tooling are compatibility paths; use evidence_cli for v1 freezing and replay.
 
-Register an approved source-access decision before retrieval. Explicit URL configuration only: no general crawler. Bounded HTTP retrieval requires public-address checks, approved host policy, redirect revalidation, timeouts, byte limits, retries with logged attempts, and rate limits. Preserve original PDF/HTML/CSV bytes under SHA-256 content-addressed storage using atomic writes. Documents record publisher/source URL, publication and retrieval timestamps, media type, storage reference and version. Hash equality deduplicates content without conflating provenance. HTML/PDF adapters extract candidates with section/page locators and parser versions; CSV imports use unique transactional import identities.
+## Deployment and acceptance
 
-## Identity, review, quality, reproducibility
+Docker uses a non-root application, migration job, private PostgreSQL and loopback app port. Write credentials may map separately to reviewer identities. Optional authenticated reads and a separate read-only token are implemented. Enable REQUIRE_READ_AUTH and configure TLS/private ingress and credential lifecycle before shared use. PostgreSQL plus snapshot storage need coordinated backups.
 
-Exact/normalized/alias matches resolve only when unique. Candidate or ambiguous matches enter a queue. Decisions carry candidate IDs, selected entity, authenticated reviewer, reason and time; merges/supersessions retain history. No fuzzy auto-acceptance. Company resolution is still missing in the baseline.
-
-Machine-readable findings include code, severity INFO/WARN/ERROR/BLOCK, affected record, and remediation. Aggregate PASS/WARN/FAIL is derived; BLOCK prevents export. Validate provenance, dimensions, finite values, dates, unresolved entities, duplicates and suspicious history changes. Observations append; conflicting facts remain distinct.
-
-Frozen evidence builds must rerun versioned parsers against preserved inputs and reproduce logical records. Current bundle restoration only reconstructs stored output; it does not satisfy this gate. Stable logical identifiers and canonical ordering must exclude volatile run/retrieval timing from equivalence checks while retaining timestamps in provenance.
-
-## Export and deployment
-
-Keep package 0.1.0-draft until week-10 Gate 5 consumer approval. v1 records must expose external_entity_id, entity_type, canonical_name, aliases, facility_type, country/region, attribute_type, reported_value/normalized_value/unit, valid_from/to, published_at/retrieved_at, source_id/document_id/content_hash, resolution_status/quality_status and pipeline/package versions. Closed schemas reject extra fields, including every prohibited field listed on plan p.18. No breaking v1 changes without version increment.
-
-The single configured write actor/token is local-pilot authentication, not multi-user accountability. Before shared deployment add authenticated identities, read/write roles, TLS, secret rotation, backup/restore and observability. Baseline run instructions remain in RUNBOOK.md. Final production release is not claimed.
-
-## Review gates
-
-1. Week 1: sponsor approves this architecture, ERD, source model and boundary; pending. No large implementation before approval.
-2. Week 3: a real permitted source is retrieved, hashed, snapshotted and registered; not passed (paste-only baseline).
-3. Week 5: a real raw facility name resolves to sourced capacity; not passed (synthetic tests only).
-4. Week 8: corrupted fixtures give predictable machine-readable findings; partial (HTTP rejection tests, incomplete quality engine).
-5. Week 10: consumer understands and approves frozen v1 contract; pending.
-6. Week 12: final end-to-end demonstration and handover accepted; pending.
-
-Approval requested: upstream-only boundary, incremental normalized PostgreSQL schema, Python orchestration/Decimal conversion, bounded native candidate-ranking component subject to benchmark, governed adapters and closed export contract. Approval authorizes implementing weeks 2–12; it does not mark subsequent acceptance gates passed.
+Gate 1 approval is recorded. Gates 2–4 and the technical portion of Gate 5 have demonstrable retrieval, resolution, negative-fixture and frozen-contract evidence. Independent consumer sign-off and Gate 6 sponsor handover acceptance are not inferred from implementation approval. The real pilot has 15 identities / three publisher families, with capacity evidence for two facilities. Broader curated coverage, performance/concurrency acceptance and production operations remain explicit backlog items.

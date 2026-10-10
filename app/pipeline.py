@@ -50,7 +50,9 @@ def parse(raw,media,spec):
         elif adapter=='pdf-v1':
             if media!='application/pdf' or not raw.startswith(b'%PDF-'): raise ValueError('PDF adapter requires a valid PDF snapshot')
             from pypdf import PdfReader
-            pdf=PdfReader(io.BytesIO(raw))
+            from pypdf.errors import PdfReadError
+            try: pdf=PdfReader(io.BytesIO(raw))
+            except PdfReadError as exc: raise ValueError('Malformed PDF snapshot') from exc
             if pdf.is_encrypted: raise ValueError('Encrypted PDFs are not supported')
             if len(pdf.pages)>200: raise ValueError('PDF page limit is 200')
             if spec.get('page') and spec['page']>len(pdf.pages): raise ValueError('Requested page does not exist')
@@ -81,6 +83,7 @@ def parse(raw,media,spec):
 def snapshot_bytes(storage,doc):
     path=Path(storage)/doc.content_hash
     if not path.is_file(): raise ValueError('Snapshot is missing')
+    if path.stat().st_size>10_000_000: raise ValueError('Snapshot exceeds 10 MB limit')
     raw=path.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=doc.content_hash: raise ValueError('Snapshot integrity failure')
     return raw

@@ -64,3 +64,10 @@ jobs:
           docker exec evidence-smoke python -m app.evidence_cli replay /app/data/ci-evidence.zip
           curl --fail --silent http://127.0.0.1:8000/api/export > /tmp/ci-package.json
           python -c "import json; p=json.load(open('/tmp/ci-package.json')); assert p['package_version']=='1.0.0' and len(p['records'])==6"
+          docker stop evidence-smoke
+          docker cp evidence-smoke:/app/data /tmp/evidence-backup
+          docker exec ${{ job.services.postgres.id }} pg_dump -U test -d muniquant_test -Fc > /tmp/operational-backup.dump
+          docker exec ${{ job.services.postgres.id }} createdb -U test muniquant_restore_test
+          docker exec -i ${{ job.services.postgres.id }} pg_restore -U test -d muniquant_restore_test < /tmp/operational-backup.dump
+          original_hash=$(python -c "import json; print(json.load(open('/tmp/ci-package.json'))['build_hash'])")
+          docker run --rm --network host -v /tmp/evidence-backup:/app/data:ro -e DATABASE_URL=postgresql+psycopg://test:test@localhost:5432/muniquant_restore_test -e EXPECTED_HASH="$original_hash" muniquant:test python -c "import os; from sqlalchemy.orm import Session; from app.db import make_engine,DATABASE_URL; from app.contract import export_v1; s=Session(make_engine(DATABASE_URL)); p=export_v1(s,'data/snapshots'); assert p['build_hash']==os.environ['EXPECTED_HASH']; print('Coordinated database/snapshot recovery is equivalent')"

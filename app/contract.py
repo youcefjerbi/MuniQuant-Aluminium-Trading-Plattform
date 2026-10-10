@@ -149,7 +149,7 @@ def replay_v1(target):
                     decision=reviews.get(candidate['review_id'])
                     if not decision or decision['status']!='accepted' or decision['selected_entity_id']!=candidate['entity_id'] or not decision['reviewer'] or not decision['reason']:
                         raise ValueError('Frozen manual identity has no reconstructable decision')
-                value,unit=normalize_value(row['reported_value'],row['unit'],row['attribute']) if row['attribute']!='status' else (None,None)
+                value,unit=normalize_value(row['reported_value'],row['unit'],row['attribute']) if row['attribute']!='status' else (None,'status')
                 if exported['document_id']!=build['document_id'] or exported['evidence_reference']!=row['evidence_reference'] or exported['attribute_type']!=row['attribute'] or exported['reported_value']!=row['reported_value'] or exported['normalized_value']!=decimal_text(value) or exported['unit']!=unit or exported['valid_from']!=row['valid_from'] or exported['valid_to']!=row['valid_to']:
                     raise ValueError('Export differs from re-extracted industrial fact')
                 checked_records.add(exported['record_id'])
