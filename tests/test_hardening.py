@@ -125,3 +125,21 @@ def test_status_csv_frozen_replay_and_bad_status_rejection(client,example,tmp_pa
     assert replay_v1(tmp_path/'statuses.zip')['replayed_candidates']==2
     doc=client.post('/api/documents',json={**payload,'media_type':'text/csv','content':csv.replace('closed,status','invented,status')}).json()
     assert client.post('/api/import/csv',json={'document_id':doc['id']}).status_code==422
+
+def test_unsafe_legacy_migration_fails_before_ddl(client,example):
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import inspect
+    import pytest
+    entity,_,doc,_=example
+    obs=client.post('/api/observations',json={'entity_id':entity['id'],'document_id':doc['id'],'reported_value':'400','reported_unit':'kt/year','valid_from':'2025-01-01','evidence_reference':'synthetic migration fixture'}).json()
+    command.downgrade(Config('alembic.ini'),'5fa787f9511c')
+    with client.app.state.engine.begin() as connection:
+        connection.execute(text("UPDATE observations SET reported_value='NaN' WHERE id=:id"),{'id':obs['id']})
+    with pytest.raises(ValueError,match='legacy exact numeric'):
+        command.upgrade(Config('alembic.ini'),'head')
+    assert 'commodity' not in inspect(client.app.state.engine).get_table_names()
+    with client.app.state.engine.begin() as connection:
+        connection.execute(text("UPDATE observations SET reported_value='400' WHERE id=:id"),{'id':obs['id']})
+    command.upgrade(Config('alembic.ini'),'head')
+    assert client.get('/api/export').status_code==200

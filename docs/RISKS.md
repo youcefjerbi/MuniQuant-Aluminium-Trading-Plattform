@@ -7,7 +7,7 @@
 | Site/name ambiguity | 50 deliberate cases include collisions, country and normalization differences | No fuzzy auto-trust; audited final manual decisions; SE1/PM |
 | Invalid/conflicting facts | Exact/date/dimension checks; overlapping facts and excessive ownership warn | Preserve independent source vintages; curator adjudication; SE1 |
 | Snapshot/database divergence | Exact byte hashes, blocking missing/corrupt files | Coordinated backups and deployment restore drill; SE2 |
-| Legacy data precision/migration | Exact values backfilled from reported values; populated migration test | Inspect migration failures; preserve IDs, do not round or rewrite source values; SE1 |
+| Legacy data precision/migration | Exact values backfilled from reported values; populated migration and unsafe-input preflight tests | Inspect migration failures; preserve IDs, do not round or rewrite source values; SE1 |
 | Live publisher change | Different HTML bytes already produced extra versions | Frozen replay, versioned literal recipes and failed-parser logs; SE2 |
 | Incomplete coverage | 15 identities, capacity facts for two, three source families | Recommended broader curation 50–100 / 5–10 remains roadmap; PM |
 | Unknown publication dates/company provenance | Real pilot has 13 WARN findings | Register explicit source dates/evidence when found; never invent values; PM |

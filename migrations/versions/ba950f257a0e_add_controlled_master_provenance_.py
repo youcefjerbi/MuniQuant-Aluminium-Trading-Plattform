@@ -7,9 +7,46 @@ down_revision = '5fa787f9511c'
 branch_labels = None
 depends_on = None
 
+def preflight(bind):
+    """Reject unsafe legacy data before any SQLite non-transactional DDL begins."""
+    from datetime import date
+    from decimal import Decimal,localcontext
+    import re,json
+    tables={name:sa.Table(name,sa.MetaData(),autoload_with=bind) for name in ('entities','observations','relationships','documents')}
+    for row in bind.execute(sa.select(tables['entities'])).mappings():
+        if not row['country'] or not re.fullmatch('[A-Z]{2}',row['country']): raise ValueError('Correct legacy entity country before migration')
+        if row['kind']=='facility' and row['facility_type'] not in ('smelter','refinery','bauxite_mine'): raise ValueError('Correct legacy facility type before migration')
+        aliases=json.loads(row['aliases']) if isinstance(row['aliases'],str) else row['aliases']
+        if not isinstance(aliases,list) or any(not isinstance(alias,str) or len(alias)>256 for alias in aliases): raise ValueError('Correct legacy aliases before migration')
+    for name in ('observations','relationships'):
+        for row in bind.execute(sa.select(tables[name])).mappings():
+            start=date.fromisoformat(row['valid_from']);end=date.fromisoformat(row['valid_to']) if row['valid_to'] else None
+            if end and end<start: raise ValueError('Correct legacy validity interval before migration')
+            if name=='relationships':
+                share=Decimal(str(row['percentage'])) if row['percentage'] is not None else None
+                if share is not None and (not share.is_finite() or not 0<=share<=100): raise ValueError('Correct legacy ownership percentage before migration')
+                continue
+            attribute=row['attribute'];unit=row['reported_unit']
+            dimensions={'capacity':{'t/year':1,'kt/year':1000,'Mt/year':1000000},'power':{'MW':1},'ownership_percentage':{'percentage':1}}
+            if attribute=='status':
+                if unit!='status' or row['reported_value'] not in ('operating','closed','suspended','planned','construction'): raise ValueError('Correct legacy status before migration')
+                continue
+            if unit not in dimensions.get(attribute,{}): raise ValueError('Correct legacy attribute/unit dimension before migration')
+            raw=row['reported_value']
+            if ',' in raw and not re.fullmatch(r'[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?',raw): raise ValueError('Correct legacy numeric grouping before migration')
+            with localcontext() as context:
+                context.prec=60
+                value=Decimal(raw.replace(',',''))*dimensions[attribute][unit]
+                if not value.is_finite() or value<0 or value>=Decimal('1e24') or value!=value.quantize(Decimal('0.000001')): raise ValueError('Correct legacy exact numeric range before migration')
+                if attribute=='ownership_percentage' and value>100: raise ValueError('Correct legacy observation percentage before migration')
+    for row in bind.execute(sa.select(tables['documents'])).mappings():
+        if not re.fullmatch('[a-f0-9]{64}',row['content_hash']): raise ValueError('Correct legacy snapshot hash before migration')
+        if row['published_at']: date.fromisoformat(row['published_at'])
+
 def upgrade():
     # Repair unnamed legacy checks before dependent candidate/detail tables exist.
     bind = op.get_bind()
+    preflight(bind)
     if bind.dialect.name == 'sqlite':
         table = sa.Table('observations', sa.MetaData(), autoload_with=bind)
         for constraint in list(table.constraints):
