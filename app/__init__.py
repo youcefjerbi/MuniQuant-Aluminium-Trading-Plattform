@@ -1,1 +1,0 @@
-"""MuniQuant industrial evidence platform."""
