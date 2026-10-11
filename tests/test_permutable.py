@@ -297,3 +297,23 @@ def test_network_wait_does_not_hold_a_database_write_lock(client, lead_source, m
     monkeypatch.setattr(acquisition, 'fetch_once', slow_fetch)
     assert client.post('/api/permutable/capture', json={'feed': 'events'}).status_code == 200
     probe.dispose()
+
+
+def test_live_capture_bridges_new_event_to_paper_engine(client, lead_source, monkeypatch):
+    from datetime import datetime, timezone
+    client.post('/api/research/policy', json={'enabled': True})
+    result = capture(client, monkeypatch, FakeAPI((200, [event(event_date=datetime.now(timezone.utc).isoformat())])))
+    assert result['research_bridge']['mode'] == 'incoming'
+    workspace = client.get('/api/research').json()
+    assert len(workspace['events']) == 1 and not workspace['events'][0]['historical']
+    assert workspace['events'][0]['payload']['lead_id']
+    assert workspace['decisions'][0]['action'] == 'HOLD'
+    result = capture(client, monkeypatch, FakeAPI((200, [event(event_date=workspace['events'][0]['occurred_at'])])))
+    assert len(client.get('/api/research').json()['decisions']) == 1
+
+
+def test_historical_capture_bridge_never_trades(client, lead_source, monkeypatch):
+    client.post('/api/research/policy', json={'enabled': True})
+    capture(client, monkeypatch, FakeAPI((200, [event()])), mode='historical', start_date='2026-10-01')
+    workspace=client.get('/api/research').json()
+    assert workspace['events'][0]['historical'] and not workspace['decisions']

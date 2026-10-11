@@ -306,7 +306,14 @@ def create_app(database_url=None, storage=None, write_token=None):
 
     @app.post('/api/permutable/capture')
     def permutable_capture(data:PermutableCaptureIn,s:Session=Depends(session),actor=Depends(writer)):
-        return permutable.capture(s,app.state.storage,actor,data)
+        result=permutable.capture(s,app.state.storage,actor,data)
+        if data.feed in ('events','event_headlines'):
+            try:
+                result['research_bridge']=research.import_leads(s,actor,result['document_ids'],live=data.mode=='live')
+            except (ValueError,LookupError) as exc:
+                s.rollback()
+                result['research_bridge']={'status':'blocked','reason':str(exc)}
+        return result
 
     @app.post('/api/permutable/documents/{identifier}/replay')
     def permutable_replay(identifier:str,s:Session=Depends(session),actor=Depends(writer)):
@@ -322,6 +329,47 @@ def create_app(database_url=None, storage=None, write_token=None):
         try: return record(permutable.decide(s,identifier,data,actor))
         except LookupError: raise HTTPException(404,'Lead not found')
         except permutable.LeadConflict as exc: raise HTTPException(409,str(exc))
+
+    from . import research
+    from .research_schemas import EventIn, QuoteIn, OutcomeIn, PolicyIn
+    from .research_models import ResearchEvent, PaperAccount, PaperPolicy
+
+    @app.exception_handler(research.Conflict)
+    async def research_conflict(request, exc):
+        return JSONResponse({'detail': str(exc)}, status_code=409)
+
+    @app.get('/api/research')
+    def research_workspace(s:Session=Depends(session)):
+        return research.dashboard(s)
+
+    @app.post('/api/research/policy')
+    def paper_policy(data:PolicyIn,s:Session=Depends(session),actor=Depends(writer)):
+        return research.configure(s,data,actor)
+
+    @app.post('/api/research/events',status_code=201)
+    def research_event(data:EventIn,s:Session=Depends(session),actor=Depends(writer)):
+        try: return research.ingest_event(s,data,actor)
+        except LookupError as exc: raise HTTPException(404,str(exc))
+
+    @app.post('/api/research/quotes',status_code=201)
+    def research_quote(data:QuoteIn,s:Session=Depends(session),actor=Depends(writer)):
+        return research.ingest_quote(s,data,actor)
+
+    @app.post('/api/research/outcomes',status_code=201)
+    def research_outcome(data:OutcomeIn,s:Session=Depends(session),actor=Depends(writer)):
+        try: return research.label_outcome(s,data,actor)
+        except LookupError as exc: raise HTTPException(404,str(exc))
+
+    @app.get('/api/research/events/{identifier}/analogues')
+    def event_analogues(identifier:str,s:Session=Depends(session)):
+        event=get(s,ResearchEvent,identifier)
+        account=s.get(PaperAccount,'paper')
+        policy=PolicyIn(**get(s,PaperPolicy,account.policy_id).settings) if account else PolicyIn()
+        return research.analogues(s,event,policy)
+
+    @app.post('/api/research/import-leads')
+    def research_import(s:Session=Depends(session),actor=Depends(writer)):
+        return research.import_leads(s,actor)
 
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     @app.get('/',include_in_schema=False)
