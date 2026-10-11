@@ -35,6 +35,7 @@ const docs=()=>data.documents.map(d=>[d.id,d.title]);
 const facilitiesOptions=()=>data.entities.filter(e=>e.kind==='facility').map(e=>[e.id,e.name]);
 function form(name,fields,path,transform=x=>x){modal(name,`<form id="editor">${fields}<div class="form-error" role="alert"></div><button class="btn primary" type="submit">Save record</button></form>`);$('#editor').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button[type="submit"]');b.disabled=true;try{const body=transform(Object.fromEntries(new FormData(e.target)));await api(path,body);$('#modal').close();await refresh();toast('Record saved.')}catch(err){e.target.querySelector('.form-error').textContent=err.message}finally{b.disabled=false}}}
 async function action(kind,id){
+if(kind.startsWith('map-')){assetMapAction(kind);return}
 if(kind==='snapshot'||kind==='schema'){
   const path=kind==='snapshot'?'documents/'+id+'/content':'export/schema';
   const response=await fetch('/api/'+path,{headers:token?{'Authorization':'Bearer '+token}:{}});
