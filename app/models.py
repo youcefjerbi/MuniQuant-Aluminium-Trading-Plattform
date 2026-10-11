@@ -398,3 +398,5 @@ class LeadHeadline(Base):
     language = Column(String(16))
     recorded_at = Column(String, nullable=False, default=now)
     __table_args__ = (UniqueConstraint('lead_id', 'content_hash', name='uq_lead_headline_content'),)
+
+from . import asset_map  # noqa: E402,F401
