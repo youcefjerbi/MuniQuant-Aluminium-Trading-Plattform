@@ -342,6 +342,11 @@ def create_app(database_url=None, storage=None, write_token=None):
     def research_workspace(s:Session=Depends(session)):
         return research.dashboard(s)
 
+    @app.get('/api/research/influence')
+    def event_influence(as_of:str|None=Query(None,max_length=40),s:Session=Depends(session)):
+        from .event_influence import report
+        return report(s,as_of)
+
     @app.get('/api/research/performance')
     def paper_performance(s:Session=Depends(session)):
         from .paper_performance import performance
