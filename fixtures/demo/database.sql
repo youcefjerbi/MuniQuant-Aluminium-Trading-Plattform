@@ -3,7 +3,7 @@ CREATE TABLE alembic_version (
 	version_num VARCHAR(32) NOT NULL, 
 	CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
 );
-INSERT INTO "alembic_version" VALUES('fcf5b3d9e812');
+INSERT INTO "alembic_version" VALUES('a7d3e19c5b42');
 CREATE TABLE audit (
 	id VARCHAR NOT NULL, 
 	created_at VARCHAR NOT NULL, 
@@ -233,6 +233,68 @@ CREATE TABLE facility_type (
 INSERT INTO "facility_type" VALUES('smelter','Primary aluminium smelter');
 INSERT INTO "facility_type" VALUES('refinery','Alumina refinery');
 INSERT INTO "facility_type" VALUES('bauxite_mine','Bauxite mine');
+CREATE TABLE lead (
+	id VARCHAR NOT NULL, 
+	source_id VARCHAR NOT NULL, 
+	external_id VARCHAR(128) NOT NULL, 
+	ticker VARCHAR(32) NOT NULL, 
+	status VARCHAR NOT NULL, 
+	first_seen_at VARCHAR NOT NULL, 
+	last_seen_at VARCHAR NOT NULL, 
+	event_date VARCHAR, 
+	topic_name VARCHAR, 
+	vendor_updated_at VARCHAR, 
+	current_revision_hash VARCHAR(64), 
+	matched_entity_count INTEGER DEFAULT '0' NOT NULL, 
+	reviewer VARCHAR, 
+	reason TEXT, 
+	decided_at VARCHAR, 
+	primary_document_id VARCHAR, 
+	observation_id VARCHAR, 
+	PRIMARY KEY (id), 
+	CONSTRAINT ck_lead_status CHECK (status IN ('new','follow_up','dismissed','confirmed')), 
+	CONSTRAINT ck_lead_confirmed_evidence CHECK (status <> 'confirmed' OR primary_document_id IS NOT NULL), 
+	FOREIGN KEY(observation_id) REFERENCES observations (id), 
+	FOREIGN KEY(primary_document_id) REFERENCES documents (id), 
+	FOREIGN KEY(source_id) REFERENCES sources (id), 
+	CONSTRAINT uq_lead_source_external UNIQUE (source_id, external_id)
+);
+CREATE TABLE lead_headline (
+	id VARCHAR NOT NULL, 
+	lead_id VARCHAR NOT NULL, 
+	document_id VARCHAR NOT NULL, 
+	content_hash VARCHAR(64) NOT NULL, 
+	parser_version VARCHAR NOT NULL, 
+	headline TEXT NOT NULL, 
+	source_name VARCHAR, 
+	link VARCHAR(2048), 
+	published_at VARCHAR, 
+	language VARCHAR(16), 
+	recorded_at VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(document_id) REFERENCES documents (id), 
+	FOREIGN KEY(lead_id) REFERENCES lead (id), 
+	CONSTRAINT uq_lead_headline_content UNIQUE (lead_id, content_hash)
+);
+CREATE TABLE lead_revision (
+	id VARCHAR NOT NULL, 
+	lead_id VARCHAR NOT NULL, 
+	document_id VARCHAR NOT NULL, 
+	content_hash VARCHAR(64) NOT NULL, 
+	parser_version VARCHAR NOT NULL, 
+	event_name TEXT NOT NULL, 
+	event_date VARCHAR, 
+	summary TEXT NOT NULL, 
+	topic_name VARCHAR, 
+	event_type VARCHAR, 
+	vendor_updated_at VARCHAR, 
+	matched_entity_ids JSON NOT NULL, 
+	recorded_at VARCHAR NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(document_id) REFERENCES documents (id), 
+	FOREIGN KEY(lead_id) REFERENCES lead (id), 
+	CONSTRAINT uq_lead_revision_content UNIQUE (lead_id, content_hash)
+);
 CREATE TABLE market_observations (
 	id VARCHAR NOT NULL, 
 	instrument VARCHAR NOT NULL, 
@@ -407,7 +469,7 @@ CREATE TABLE runs (
 	PRIMARY KEY (id)
 );
 INSERT INTO "runs" VALUES('a4bf5b17-13c5-4c0e-b6e1-b823d684a5a9','2026-10-10T22:48:05.922924+00:00','1.0.0','success','{"content_hash": "77b15557eff1ff60f15f2e34cd3a1b66a7494a6cc4a61b0464aeb66aa3e26624", "document_id": "b0193414-6add-4707-9725-df7669bcaa20", "adapter": "text-upload-v1"}');
-CREATE TABLE source_access (
+CREATE TABLE "source_access" (
 	id VARCHAR NOT NULL, 
 	source_id VARCHAR NOT NULL, 
 	status VARCHAR NOT NULL, 
@@ -416,8 +478,13 @@ CREATE TABLE source_access (
 	retention TEXT NOT NULL, 
 	reviewer VARCHAR NOT NULL, 
 	decided_at VARCHAR NOT NULL, 
+	credential_ref VARCHAR(64), 
+	auth_header VARCHAR(64), 
+	usage_scope VARCHAR DEFAULT 'evidence' NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT ck_source_access_status CHECK (status IN ('permitted','review_required','restricted')), 
+	CONSTRAINT ck_source_access_usage CHECK (usage_scope IN ('evidence','leads_only')), 
+	CONSTRAINT ck_source_access_credential CHECK ((credential_ref IS NULL) = (auth_header IS NULL)), 
 	FOREIGN KEY(source_id) REFERENCES sources (id)
 );
 CREATE TABLE source_document_relation (
@@ -454,10 +521,16 @@ CREATE INDEX ix_market_observations_instrument ON market_observations (instrumen
 CREATE INDEX ix_entity_alias_entity_id ON entity_alias (entity_id);
 CREATE INDEX ix_entity_alias_normalized_name ON entity_alias (normalized_name);
 CREATE INDEX ix_retrieval_attempt_run_id ON retrieval_attempt (run_id);
-CREATE INDEX ix_source_access_source_id ON source_access (source_id);
 CREATE INDEX ix_candidate_build_id ON candidate (build_id);
 CREATE VIEW facility_alias AS SELECT a.* FROM entity_alias a JOIN entities e ON e.id=a.entity_id WHERE e.kind='facility';
 CREATE INDEX ix_observations_entity_id ON observations (entity_id);
 CREATE VIEW capacity_observation AS SELECT o.*, d.normalized_value AS exact_value FROM observations o JOIN observation_detail d ON d.observation_id=o.id WHERE o.attribute='capacity';
 CREATE VIEW status_observation AS SELECT * FROM observations WHERE attribute='status';
+CREATE INDEX ix_source_access_source_id ON source_access (source_id);
+CREATE INDEX ix_lead_event_date ON lead (event_date);
+CREATE INDEX ix_lead_source_id ON lead (source_id);
+CREATE INDEX ix_lead_revision_document_id ON lead_revision (document_id);
+CREATE INDEX ix_lead_revision_lead_id ON lead_revision (lead_id);
+CREATE INDEX ix_lead_headline_document_id ON lead_headline (document_id);
+CREATE INDEX ix_lead_headline_lead_id ON lead_headline (lead_id);
 COMMIT;
