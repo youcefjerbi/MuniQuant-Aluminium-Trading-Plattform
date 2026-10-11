@@ -120,3 +120,7 @@ docs/               Architecture, decisions, backlog and operations
 6. Export a package from Data quality and verify its source/document references.
 
 Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads are open by default on loopback. Enable REQUIRE_READ_AUTH and configure TLS/private ingress before shared deployment. No license for redistribution of third-party source data is implied by this repository.
+
+## Manual disruption investigations
+
+Open **Investigations** to create analyst-led cases independently of Permutable API events. Collect sourced evidence, hypotheses, contradictions and questions; track conclusions, investigator and review dates with a preserved revision history. Run `alembic upgrade head` after updating. See [the investigation guide](docs/INVESTIGATIONS.md).

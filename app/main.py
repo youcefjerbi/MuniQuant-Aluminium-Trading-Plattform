@@ -91,6 +91,35 @@ def create_app(database_url=None, storage=None, write_token=None):
         if 'locked' not in str(exc.orig).lower(): raise exc
         return JSONResponse({'detail':'The database is busy with another write; retry in a moment'},status_code=503)
 
+    from .investigations import Investigation, InvestigationRevision, CaseIn, RevisionIn, CaseConflict
+    from . import investigations
+
+    @app.exception_handler(CaseConflict)
+    async def case_conflict(request,exc):
+        return JSONResponse({'detail':str(exc)},status_code=409)
+
+    @app.get('/api/investigations')
+    def cases(status:str|None=Query(None,pattern='^(investigating|confirmed|disproven|resolved|inconclusive)$'),
+              offset:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=100),s:Session=Depends(session)):
+        query=select(Investigation)
+        if status: query=query.where(Investigation.status==status)
+        return [record(c) for c in s.scalars(query.order_by(Investigation.updated_at.desc(),Investigation.id).offset(offset).limit(limit))]
+
+    @app.post('/api/investigations',status_code=201)
+    def create_case(data:CaseIn,s:Session=Depends(session),actor=Depends(writer)):
+        c=investigations.create(s,data,actor);audit(s,actor,'investigation_created',c);s.commit();return record(c)
+
+    @app.get('/api/investigations/{identifier}')
+    def case_detail(identifier:str,s:Session=Depends(session)):
+        c=get(s,Investigation,identifier)
+        return {'case':record(c),'revisions':[record(r) for r in s.scalars(select(InvestigationRevision)
+            .where(InvestigationRevision.case_id==identifier).order_by(InvestigationRevision.version))]}
+
+    @app.post('/api/investigations/{identifier}/revisions',status_code=201)
+    def revise_case(identifier:str,data:RevisionIn,s:Session=Depends(session),actor=Depends(writer)):
+        c=investigations.revise(s,get(s,Investigation,identifier),data,actor)
+        audit(s,actor,'investigation_revised',c);s.commit();return record(c)
+
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
         s.execute(text('SELECT 1'))

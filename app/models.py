@@ -398,3 +398,6 @@ class LeadHeadline(Base):
     language = Column(String(16))
     recorded_at = Column(String, nullable=False, default=now)
     __table_args__ = (UniqueConstraint('lead_id', 'content_hash', name='uq_lead_headline_content'),)
+
+# Manual investigations are separate from vendor event ingestion.
+from . import investigations  # noqa: E402,F401
