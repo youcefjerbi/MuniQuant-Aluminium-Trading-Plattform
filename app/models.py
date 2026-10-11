@@ -401,3 +401,5 @@ class LeadHeadline(Base):
 
 # Import the isolated experimental models so Alembic sees the complete metadata.
 from . import research_models  # noqa: E402,F401
+
+from . import asset_map  # noqa: E402,F401
