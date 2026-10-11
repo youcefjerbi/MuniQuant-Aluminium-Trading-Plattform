@@ -1,5 +1,5 @@
 'use strict';
-let data, token='', page='overview', leadFilter={status:'new',matched:'',topic:''}, polling=false;
+let data, token='', page='overview', leadFilter={status:'new',matched:'',topic:'',search:''}, polling=false;
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const label=v=>String(v??'').replaceAll('_',' ');

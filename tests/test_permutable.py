@@ -297,3 +297,27 @@ def test_network_wait_does_not_hold_a_database_write_lock(client, lead_source, m
     monkeypatch.setattr(acquisition, 'fetch_once', slow_fetch)
     assert client.post('/api/permutable/capture', json={'feed': 'events'}).status_code == 200
     probe.dispose()
+
+
+def test_similarity_search_ranks_before_pagination_and_searches_headlines(client, lead_source, monkeypatch):
+    capture(client, monkeypatch, FakeAPI((200, [
+        event('unrelated', summary='Refinery maintenance scheduled', event_name='Routine work'),
+        event('relevant', summary='power outage smelter', event_name='power outage smelter'),
+        event('partial', summary='smelter expansion', event_name='New investment'),
+    ])))
+    result = client.get('/api/leads', params={'search': 'POWER outage smelter', 'limit': 1}).json()
+    assert result['total'] == 2 and len(result['leads']) == 1
+    assert result['leads'][0]['latest_revision']['summary'] == 'power outage smelter'
+    assert result['ranking'] == 'tfidf-cosine-v1'
+    assert result['leads'][0]['matched_terms'] == ['outage', 'power', 'smelter']
+    second = client.get('/api/leads', params={'search': 'power outage smelter', 'limit': 1, 'offset': 1}).json()
+    assert second['leads'][0]['id'] != result['leads'][0]['id']
+    assert second['leads'][0]['similarity_score'] < result['leads'][0]['similarity_score']
+    assert client.get('/api/leads', params={'search': 'zzzznonexistent'}).json()['total'] == 0
+    assert client.get('/api/leads', params={'search': '!!!'}).json()['total'] == 0
+    assert client.get('/api/leads', params={'search': '   '}).json()['total'] == 3
+    assert client.get('/api/leads', params={'search': 'power', 'status': 'confirmed'}).json()['total'] == 0
+    assert client.get('/api/leads', params={'search': 'x' * 501}).status_code == 422
+    capture(client, monkeypatch, FakeAPI((200, [headline('unrelated', title='Uniquehydropower interruption')])), feed='event_headlines')
+    found = client.get('/api/leads', params={'search': 'uniquehydropower'}).json()
+    assert found['total'] == 1 and found['leads'][0]['latest_revision']['event_name'] == 'Routine work'
