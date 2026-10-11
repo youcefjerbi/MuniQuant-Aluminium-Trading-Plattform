@@ -8,7 +8,7 @@ Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operati
 
 This branch adds the sponsor-requested downstream **research and simulated trading extension** beyond the original PDF's upstream-only scope. The evidence module and its export contract remain separate. The original twelve-week reports describe the upstream baseline, not acceptance of a live trading system.
 
-Open **Patterns & paper trades** to register events, inspect relationship chains and historical analogues, configure a paper account, and inspect automatic BUY/SELL/HOLD decisions. Automation starts paused. There is no broker integration or real-money execution. See [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md) for the complete fictional demo, API ingestion, policy and limitations.
+Open **Patterns & paper trades** to register events, inspect relationship chains and historical analogues, configure a paper account, and inspect automatic BUY/SELL/HOLD decisions. Automation starts paused. There is no broker integration or real-money execution. The same page includes a TradingView market chart and local stored-price, simulated-fill and portfolio-performance charts. Chart selection does not alter the paper instrument; simulated trades do not move actual markets. See [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md) for the complete fictional demo, API ingestion, policy and limitations.
 
 ## Scope and delivery status
 

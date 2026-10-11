@@ -8,7 +8,7 @@ import hashlib
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
@@ -73,9 +73,9 @@ def create_app(database_url=None, storage=None, write_token=None):
             request._body=bytes(body)
         response=await call_next(request)
         response.headers['X-Content-Type-Options']='nosniff'
-        response.headers['Referrer-Policy']='same-origin'
+        response.headers.setdefault('Referrer-Policy','same-origin')
         if request.url.path in ('/','/static/app.js','/static/style.css'):
-            response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
+            response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src 'self' https://www.tradingview-widget.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
         logger.info(json.dumps({'method':request.method,'path':request.url.path,'status':response.status_code,'duration_ms':round((time.monotonic()-start)*1000)}))
         return response
 
@@ -342,6 +342,11 @@ def create_app(database_url=None, storage=None, write_token=None):
     def research_workspace(s:Session=Depends(session)):
         return research.dashboard(s)
 
+    @app.get('/api/research/performance')
+    def paper_performance(s:Session=Depends(session)):
+        from .paper_performance import performance
+        return performance(s)
+
     @app.post('/api/research/policy')
     def paper_policy(data:PolicyIn,s:Session=Depends(session),actor=Depends(writer)):
         return research.configure(s,data,actor)
@@ -370,6 +375,17 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.post('/api/research/import-leads')
     def research_import(s:Session=Depends(session),actor=Depends(writer)):
         return research.import_leads(s,actor)
+
+    @app.get('/market-chart',include_in_schema=False)
+    def market_chart(symbol:str=Query('NYSE:AA',min_length=1,max_length=80,pattern=r'^[A-Z0-9_:./-]+$'),
+                     interval:str=Query('D',pattern=r'^(15|60|D|W)$')):
+        from urllib.parse import quote
+        config={'autosize':True,'width':'100%','height':'100%','symbol':symbol,'interval':interval,
+                'timezone':'Etc/UTC','theme':'light','style':'1','locale':'en','allow_symbol_change':False,
+                'hide_side_toolbar':False,'calendar':False,'support_host':'https://www.tradingview.com',
+                'utm_source':'muniquant','utm_medium':'widget_new','utm_campaign':'advanced-chart'}
+        url='https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en#'+quote(json.dumps(config))
+        return RedirectResponse(url,status_code=307,headers={'Referrer-Policy':'no-referrer','Cache-Control':'no-store'})
 
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     @app.get('/',include_in_schema=False)
