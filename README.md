@@ -4,9 +4,15 @@ An evidence-first industrial evidence workspace built with **Python, C++17, and 
 
 Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operational instructions are in [the runbook](docs/RUNBOOK.md).
 
+## Experimental event-chain and paper-engine branch
+
+This branch adds the sponsor-requested downstream **research and simulated trading extension** beyond the original PDF's upstream-only scope. The evidence module and its export contract remain separate. The original twelve-week reports describe the upstream baseline, not acceptance of a live trading system.
+
+Open **Patterns & paper trades** to register events, inspect relationship chains and historical analogues, configure a paper account, and inspect automatic BUY/SELL/HOLD decisions. Automation starts paused. There is no broker integration or real-money execution. The same page includes a TradingView market chart and local stored-price, simulated-fill and portfolio-performance charts. Chart selection does not alter the paper instrument; simulated trades do not move actual markets. See [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md) for the complete fictional demo, API ingestion, policy and limitations.
+
 ## Scope and delivery status
 
-Implements the upstream-only **12 week Project Plan V01 (2)**. The sponsor approved implementation on 2026-10-10. The version 1.0.0 evidence contract is implemented; the application is a 1.0.0 release candidate. No trading signals, forecasts, recommendations or downstream proprietary logic are present in the active service. Legacy market tables remain solely to preserve migration history.
+Implements the upstream-only **12 week Project Plan V01 (2)**. The sponsor approved implementation on 2026-10-10. The version 1.0.0 evidence contract is implemented; the application is a 1.0.0 release candidate. The upstream evidence module and exported evidence packages contain no trading signals, forecasts, recommendations or downstream proprietary logic. The experimental paper engine is an explicitly separate extension on this branch. Legacy market tables remain solely to preserve migration history.
 
 The real-source pilot registers **15 facilities, five companies, three publisher families**, three capacity observations from preserved document versions, and four sourced ownership/operator relationships. Capacity coverage is only two facilities. Broad final coverage (50–100 facilities / 5–10 families), independent consumer acceptance and shared-production operations remain open. See [validation](docs/VALIDATION.md) and [backlog](docs/BACKLOG.md).
 
