@@ -115,6 +115,19 @@ def create_app(database_url=None, storage=None, write_token=None):
         return {'case':record(c),'revisions':[record(r) for r in s.scalars(select(InvestigationRevision)
             .where(InvestigationRevision.case_id==identifier).order_by(InvestigationRevision.version))]}
 
+    @app.get('/api/investigations/{identifier}/notebook')
+    def case_notebook(identifier:str,s:Session=Depends(session)):
+        get(s,Investigation,identifier)
+        from .investigations import InvestigationEntry, InvestigationTask, InvestigationTaskEvidence
+        entries=[record(e) for e in s.scalars(select(InvestigationEntry).where(InvestigationEntry.case_id==identifier)
+            .order_by(InvestigationEntry.recorded_at,InvestigationEntry.id))]
+        tasks=[record(t) for t in s.scalars(select(InvestigationTask).where(InvestigationTask.case_id==identifier)
+            .order_by(InvestigationTask.created_at,InvestigationTask.id))]
+        for task in tasks:
+            task['evidence_entry_ids']=list(s.scalars(select(InvestigationTaskEvidence.entry_id)
+                .where(InvestigationTaskEvidence.task_id==task['id']).order_by(InvestigationTaskEvidence.entry_id)))
+        return {'entries':entries,'tasks':tasks}
+
     @app.post('/api/investigations/{identifier}/revisions',status_code=201)
     def revise_case(identifier:str,data:RevisionIn,s:Session=Depends(session),actor=Depends(writer)):
         c=investigations.revise(s,get(s,Investigation,identifier),data,actor)

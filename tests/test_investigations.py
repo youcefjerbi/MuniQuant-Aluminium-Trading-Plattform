@@ -72,3 +72,20 @@ def test_evidence_hypothesis_link_and_publication_chronology(client):
     c=revise(client,c,entry=entry).json()
     assert c['snapshot']['entries'][1]['stance']=='contradicts'
     assert c['snapshot']['entries'][1]['passage']==entry['passage']
+
+def test_normalized_notebook_records_and_task_links(client):
+    c=make(client)
+    c=revise(client,c,entry={'kind':'hypothesis','text':'Backup supply'}).json()
+    h=c['snapshot']['entries'][0]['id']
+    c=revise(client,c,entry={'kind':'evidence','text':'Sourced notice','source_url':'https://example.org/notice','hypothesis_id':h}).json()
+    evidence=c['snapshot']['entries'][1]['id']
+    c=revise(client,c,task={'question':'Confirm supply','status':'answered','answer':'Confirmed','evidence_entry_ids':[evidence]}).json()
+    report=client.get('/api/investigations/'+c['id']+'/notebook').json()
+    assert len(report['entries'])==2 and len(report['tasks'])==1
+    assert next(e for e in report['entries'] if e['id']==evidence)['hypothesis_id']==h
+    assert report['tasks'][0]['evidence_entry_ids']==[evidence]
+    t=c['snapshot']['tasks'][0]
+    c=revise(client,c,task={'id':t['id'],'question':t['question'],'status':'open'}).json()
+    report=client.get('/api/investigations/'+c['id']+'/notebook').json()
+    assert report['tasks'][0]['evidence_entry_ids']==[]
+    assert len(report['entries'])==2

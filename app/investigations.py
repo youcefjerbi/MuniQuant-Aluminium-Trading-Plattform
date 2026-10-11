@@ -153,5 +153,62 @@ def revise(s, case, data, actor):
     if result.rowcount != 1:
         raise CaseConflict('Case changed; refresh before saving your revision')
     s.add(InvestigationRevision(case_id=case.id,version=version,actor=actor,snapshot=snapshot))
+    persist_notebook(s,case.id,snapshot)
     s.flush();s.refresh(case)
     return case
+
+class InvestigationEntry(Base):
+    __tablename__='investigation_entry'
+    id=Column(String,primary_key=True)
+    case_id=Column(String,ForeignKey('investigation.id'),nullable=False,index=True)
+    kind=Column(String(32),nullable=False,index=True)
+    text=Column(String,nullable=False)
+    document_id=Column(String,ForeignKey('documents.id'))
+    hypothesis_id=Column(String,ForeignKey('investigation_entry.id'))
+    stance=Column(String(16),nullable=False)
+    source_url=Column(String)
+    passage=Column(String,nullable=False)
+    published_at=Column(String)
+    actor=Column(String,nullable=False)
+    recorded_at=Column(String,nullable=False)
+
+class InvestigationTask(Base):
+    __tablename__='investigation_task'
+    id=Column(String,primary_key=True)
+    case_id=Column(String,ForeignKey('investigation.id'),nullable=False,index=True)
+    question=Column(String,nullable=False)
+    assignee=Column(String,nullable=False,index=True)
+    due_at=Column(String,index=True)
+    status=Column(String(16),nullable=False,index=True)
+    answer=Column(String,nullable=False)
+    created_by=Column(String,nullable=False)
+    created_at=Column(String,nullable=False)
+    updated_by=Column(String,nullable=False)
+    updated_at=Column(String,nullable=False)
+
+class InvestigationTaskEvidence(Base):
+    __tablename__='investigation_task_evidence'
+    task_id=Column(String,ForeignKey('investigation_task.id'),primary_key=True)
+    entry_id=Column(String,ForeignKey('investigation_entry.id'),primary_key=True)
+
+
+def persist_notebook(s,case_id,snapshot):
+    """Transactional normalized current records; revisions remain historical snapshots."""
+    from sqlalchemy import delete
+    for entry in snapshot['entries']:
+        if not s.get(InvestigationEntry,entry['id']):
+            values={k:entry.get(k) for k in ['id','kind','text','document_id','hypothesis_id','source_url','published_at','actor','recorded_at']}
+            values.update(case_id=case_id,stance=entry.get('stance','context'),passage=entry.get('passage',''))
+            s.add(InvestigationEntry(**values));s.flush()
+    for task in snapshot.get('tasks',[]):
+        values={k:v for k,v in task.items() if k!='evidence_entry_ids'}
+        values['case_id']=case_id
+        row=s.get(InvestigationTask,task['id'])
+        if row:
+            for key,value in values.items():setattr(row,key,value)
+        else:s.add(InvestigationTask(**values))
+        s.flush()
+        s.execute(delete(InvestigationTaskEvidence).where(InvestigationTaskEvidence.task_id==task['id']))
+        for identifier in task['evidence_entry_ids']:
+            s.add(InvestigationTaskEvidence(task_id=task['id'],entry_id=identifier))
+    s.flush()
