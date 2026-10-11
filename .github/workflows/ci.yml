@@ -45,6 +45,7 @@ jobs:
         if: matrix.database == 'sqlite'
         run: |
           python scripts/restore_demo.py
+          DATABASE_URL=sqlite:///data/demo.db alembic upgrade head
           DATABASE_URL=sqlite:///data/demo.db alembic check
       - name: Export schema stays in sync
         run: |
