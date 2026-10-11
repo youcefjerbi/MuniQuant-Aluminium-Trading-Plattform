@@ -313,9 +313,9 @@ def create_app(database_url=None, storage=None, write_token=None):
         return permutable.replay_document(s,app.state.storage,identifier)
 
     @app.get('/api/leads')
-    def leads(status:str|None=Query(None,pattern='^(new|follow_up|dismissed|confirmed)$'),topic:str|None=Query(None,max_length=200),matched:bool|None=None,
+    def leads(status:str|None=Query(None,pattern='^(new|follow_up|dismissed|confirmed)$'),topic:str|None=Query(None,max_length=200),matched:bool|None=None,search:str|None=Query(None,max_length=500),
               offset:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=500),s:Session=Depends(session)):
-        return {**permutable.list_leads(s,status,offset,limit,topic,matched),'source_id':permutable.SOURCE_ID}
+        return {**permutable.list_leads(s,status,offset,limit,topic,matched,search),'source_id':permutable.SOURCE_ID}
 
     @app.post('/api/leads/{identifier}/decision')
     def lead_decision(identifier:str,data:LeadDecisionIn,s:Session=Depends(session),actor=Depends(writer)):
