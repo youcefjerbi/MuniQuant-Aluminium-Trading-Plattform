@@ -13,6 +13,9 @@ README.md contains complete local and Docker instructions. Install pinned depend
 | REQUIRE_READ_AUTH | `true` protects API reads except health; default `false` for loopback pilot |
 | READ_TOKEN | Optional read-only bearer credential; cannot authorize writes |
 | POSTGRES_PASSWORD | Compose database secret; use independent URL-safe generated hexadecimal string |
+| PERMUTABLE_API_KEY | Licensed Permutable API key. Only its variable name is stored in the access policy; the value never reaches the database, logs or snapshots |
+| PERMUTABLE_TICKERS | Comma-separated tickers for `python -m app.permutable poll`; default `ALI_COM` |
+| LICENSED_CREDENTIALS_JSON | Server-side map of credential variable names to the only hosts allowed to receive them; default `{"PERMUTABLE_API_KEY": ["copilot-api.permutable.ai"]}`. Access policies cannot reference any other variable (such as WRITE_TOKEN or DATABASE_URL) |
 
 Use environment/ignored .env for secrets. Compose loads .env; ordinary Python does not. The UI retains the credential only in memory until reload. If protected reads are enabled, enter a read/write credential in Workspace access to load data. UI snapshot/schema downloads send the in-memory bearer credential, including for read-only access. Direct API requests require the bearer header when protected reads are enabled. TLS/private ingress, rotation and identity-provider integration are deployment-owner controls. Compose exposes only loopback port 8000, not the database.
 
@@ -34,6 +37,22 @@ Synthetic Example,NO,closed,status,2024-01-01,2024-12-31,status,section 2
 ```
 
 The rows above are fictional. Capacity units: t/year, kt/year, Mt/year; power: MW; ownership: percentage; operational status: operating/closed/suspended/planned/construction with status unit. Required CSV fields are name, country, reported value/unit, start date and evidence locator. Optional attribute defaults to capacity and optional end date to null. Maximum 1,000 rows/build. Invalid numeric/date/status rows leave no partial facts; failure logs remain. Valid unresolved rows enter review rather than becoming trusted. Duplicate builds are idempotent. Concurrent duplicates either reuse the build or return 409; refresh/retry after a conflict.
+
+## Licensed event leads (Permutable AI)
+
+Permutable is a lead-only source (ADR 0003): its events point curators to industrial changes; observations must cite a primary source.
+
+```sh
+export PERMUTABLE_API_KEY=...            # or set it in .env for Compose
+python -m app.permutable setup           # source + audited lead-only access policy + reference responses
+python -m app.permutable capture --feed events --mode historical --since 2026-07-01   # optional backfill
+python -m app.permutable capture --feed event_headlines --mode historical --since 2026-07-01
+python -m app.permutable poll            # live events + headlines; schedule every 15 minutes
+```
+
+The same operations are available as POST /api/permutable/source and POST /api/permutable/capture, and as Register / Poll buttons on the Event leads screen. Each response page is a fingerprinted document version; an unchanged poll is recorded as a duplicate. Historical windows follow `next_token` up to `max_pages` (default 10, 500 records each). A 403 means the key is missing, not recognised or not licensed for that ticker; HTTP 429 is retried with 1 s and 2 s back-off. Keys with control characters are rejected and any echoed key is redacted from logs. Setup never reopens a restricted or under-review source; record a new access decision first. When the licence ends, restrict the source: lead documents then report INFO findings and do not block the evidence export.
+
+Curator workflow: filter leads by status, asset match and topic; open headline links; Follow up or Dismiss with a reason; to confirm, capture the primary source (company, regulator, industry body) through Source onboarding, record the observation from it, then Confirm the lead with that document. Lead-only documents are rejected as evidence and flagged `LEAD_SOURCE_CITED` (BLOCK) if inserted by other means. POST /api/permutable/documents/{id}/replay re-parses a preserved response and proves the stored lead facts are equivalent. Raw responses are licensed data: keep the snapshot store private and never commit captures.
 
 ## Logs, health and pagination
 

@@ -2,6 +2,8 @@
 
 Priority: company publications, government, regulators, established industry/public bodies. Formats: HTML, PDF, structured CSV/API. No aggressive scraping or licensed access bypass.
 
+Licensed lead feeds (`commercial`, access usage `leads_only`): Permutable AI events and event headlines for `ALI_COM` (Aluminum, COMEX). They are captured with a credential reference, preserved as snapshots and turned into curator leads, but never cited as evidence; the confirming fact must come from a primary source above. Vendor sentiment, impact, signal and forecast fields are out of scope (ADR 0003).
+
 Source governance fields: publisher, category, URL, approved hosts, acquisition method, access status, legal/access basis, retention/redistribution restrictions, reviewer, decision time . A public URL alone is not an access approval. review_required and restricted sources cannot be acquired. Synthetic fixtures remain clearly marked and do not count toward real coverage.
 
 Document/version fields: title, original URL, source relation, publication timestamp (nullable with warning), retrieval timestamp, media type, SHA-256, storage reference, version and parser version. Every retrieval attempt records status, attempt number, error category and run identity without secrets.

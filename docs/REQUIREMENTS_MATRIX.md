@@ -19,6 +19,7 @@ Requirements: **12 week Project Plan V01 (2).pdf**, original pp.1–28, followed
 | W5 / pp.12–13 | Aliases/external IDs/merge-supersession; all matching stages; difficult benchmark | audited supersession, no auto fuzzy trust; 50-case fixture; real capacities | Implemented / Gate 3 demonstrated |
 | W6 / pp.13–14 | Reconstructable decision metadata; interface; SLA/categories/rules/escalation | review endpoints/UI; individual actor tests; REVIEW_POLICY.md | Implemented; operating SLA measurements not invented |
 | W7 / pp.14–15 | 2–3 reusable source adapters and onboarding | HTML/PDF/CSV config recipes; RUNBOOK.md | Implemented; no OCR/complex arbitrary table inference |
+| W7 / D3 extension | Licensed API source used for discovery | Credentialed Permutable adapter, versioned lead parser, lead triage and replay (ADR 0003) | Implemented as lead-only; never cited as evidence, no vendor analytics |
 | W8 / pp.15–16 | DB clear invariants; missing unit/date/provenance/ambiguity/jumps; severities/remediation | constraints and machine-readable quality; bad-fixture tests | Implemented / Gate 4 demonstrated |
 | W9 / pp.16–17 | Runs/version/snapshots/hashes/manifests; frozen-input rebuild equivalence | evidence_cli and recipes; real offline parser replay | Implemented; no MEI PIT replay claimed |
 | W10 / pp.17–18 | JSON/API export, schema, mappings, docs/versioning; all ten forbidden fields | closed 1.0.0 contract; independent consumer simulation | Implemented / technical Gate 5; human sign-off distinct |
