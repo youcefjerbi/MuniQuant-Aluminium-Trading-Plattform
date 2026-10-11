@@ -91,6 +91,30 @@ def create_app(database_url=None, storage=None, write_token=None):
         if 'locked' not in str(exc.orig).lower(): raise exc
         return JSONResponse({'detail':'The database is busy with another write; retry in a moment'},status_code=503)
 
+    from .asset_map import LocationIn, DependencyIn, AssetLocation, AssetDependency
+    from . import asset_map
+    from datetime import date
+
+    @app.get('/api/asset-map')
+    def asset_graph(product:str|None=Query(None,pattern='^(bauxite|alumina|primary_aluminium|electricity|other)$'),as_of:date|None=None,s:Session=Depends(session)):
+        return asset_map.graph(s,product,as_of)
+
+    @app.post('/api/asset-map/locations',status_code=201)
+    def asset_location(data:LocationIn,s:Session=Depends(session),actor=Depends(writer)):
+        values=data.model_dump();asset_map.validate_references(s,values)
+        obj=AssetLocation(**values,actor=actor);s.add(obj);audit(s,actor,'asset_location',obj);s.commit();return record(obj)
+
+    @app.post('/api/asset-map/dependencies',status_code=201)
+    def asset_dependency(data:DependencyIn,s:Session=Depends(session),actor=Depends(writer)):
+        values=data.model_dump(mode='json');asset_map.validate_references(s,values)
+        obj=AssetDependency(**values,actor=actor);s.add(obj);audit(s,actor,'asset_dependency',obj);s.commit();return record(obj)
+
+    @app.get('/asset-map-view')
+    def map_view():
+        response=FileResponse(STATIC/'asset-map-view.html')
+        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+        return response
+
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
         s.execute(text('SELECT 1'))

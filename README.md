@@ -126,3 +126,7 @@ docs/               Architecture, decisions, backlog and operations
 6. Export a package from Data quality and verify its source/document references.
 
 Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads are open by default on loopback. Enable REQUIRE_READ_AUTH and configure TLS/private ingress before shared deployment. No license for redistribution of third-party source data is implied by this repository.
+
+## Geographic asset dependency map
+
+Open **Asset map** to browse countries, register sourced locations and connect industrial assets by product. Filter associations by product and effective date. The bundled world basemap requires no external map service. See [the map guide](docs/ASSET_MAP.md); run `alembic upgrade head` after updating.
