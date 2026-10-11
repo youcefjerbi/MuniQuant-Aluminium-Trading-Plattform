@@ -12,3 +12,7 @@ data/
 *.db
 *.db-*
 playwright-report/
+
+# Private planning and vendor documents (confidential sections)
+*.pdf
+docs/private/
