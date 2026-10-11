@@ -11,7 +11,8 @@ Implementation was approved on 2026-10-10. Weekly reports describe completed cod
 | P1 | Curate real historical effective-date changes and multiple capacity/status facts per asset; retain conflicting vintages | SE1 / PM |
 | P1 | Independent curator usability review and deployment-specific performance thresholds (50-name, concurrent import and 500-record correctness checks are delivered) | SE1 / SE2 / PM |
 | P1 | Add source-specific parsers for complex tables/OCR only with justified scope; review copyright/retention before redistribution | SE2 / PM |
-| P1 | Optional scheduled acquisition cadence, host budgets and operational alarms (durable failed-parser logs are delivered) | SE2 |
+| P1 | Optional scheduled acquisition cadence, host budgets and operational alarms (durable failed-parser logs are delivered; `python -m app.permutable poll` is ready for a 15-minute schedule) | SE2 |
+| P1 | Triage Permutable leads that mention registered assets; capture the confirming primary sources and record dated status/capacity/ownership changes | PM / SE1 |
 | P2 | Extend the UI beyond its 1,000-record initial view using the delivered paginated records API | SE2 |
 
 Protect provenance, hashing, identity, validation, contract and reproducibility ahead of dashboard breadth. No downstream/trading additions are authorized by this backlog.

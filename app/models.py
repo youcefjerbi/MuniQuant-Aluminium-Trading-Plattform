@@ -222,7 +222,14 @@ class SourceAccess(Base):
     retention = Column(Text, nullable=False)
     reviewer = Column(String, nullable=False)
     decided_at = Column(String, nullable=False, default=now)
-    __table_args__ = (CheckConstraint("status IN ('permitted','review_required','restricted')", name='ck_source_access_status'),)
+    # Name of the server environment variable holding an API credential; never the secret itself.
+    credential_ref = Column(String(64))
+    auth_header = Column(String(64))
+    # 'leads_only' sources (licensed news/event feeds) point curators to changes but are never cited as evidence.
+    usage_scope = Column(String, nullable=False, default='evidence', server_default='evidence')
+    __table_args__ = (CheckConstraint("status IN ('permitted','review_required','restricted')", name='ck_source_access_status'),
+                      CheckConstraint("usage_scope IN ('evidence','leads_only')", name='ck_source_access_usage'),
+                      CheckConstraint('(credential_ref IS NULL) = (auth_header IS NULL)', name='ck_source_access_credential'))
 
 class SourceSnapshot(Base):
     __tablename__ = 'source_snapshot'
@@ -333,3 +340,61 @@ class EntityEvidence(Base):
     reviewer = Column(String, nullable=False)
     reason = Column(Text, nullable=False)
     created_at = Column(String, nullable=False, default=now)
+
+# Leads from licensed event feeds: curator work items, never exported evidence.
+class Lead(Base):
+    __tablename__ = 'lead'
+    id = Column(String, primary_key=True)
+    source_id = Column(String, ForeignKey('sources.id'), nullable=False, index=True)
+    external_id = Column(String(128), nullable=False)
+    ticker = Column(String(32), nullable=False)
+    status = Column(String, nullable=False, default='new')
+    first_seen_at = Column(String, nullable=False)
+    last_seen_at = Column(String, nullable=False)
+    # Current view of the newest vendor revision, kept for sorting and filtering only.
+    event_date = Column(String, index=True)
+    topic_name = Column(String)
+    vendor_updated_at = Column(String)
+    current_revision_hash = Column(String(64))
+    matched_entity_count = Column(Integer, nullable=False, default=0, server_default='0')
+    reviewer = Column(String)
+    reason = Column(Text)
+    decided_at = Column(String)
+    primary_document_id = Column(String, ForeignKey('documents.id'))
+    observation_id = Column(String, ForeignKey('observations.id'))
+    __table_args__ = (UniqueConstraint('source_id', 'external_id', name='uq_lead_source_external'),
+                      CheckConstraint("status IN ('new','follow_up','dismissed','confirmed')", name='ck_lead_status'),
+                      CheckConstraint("status <> 'confirmed' OR primary_document_id IS NOT NULL", name='ck_lead_confirmed_evidence'))
+
+class LeadRevision(Base):
+    """One distinct factual state of a vendor event, kept with the first snapshot that carried it."""
+    __tablename__ = 'lead_revision'
+    id = Column(String, primary_key=True)
+    lead_id = Column(String, ForeignKey('lead.id'), nullable=False, index=True)
+    document_id = Column(String, ForeignKey('documents.id'), nullable=False, index=True)
+    content_hash = Column(String(64), nullable=False)
+    parser_version = Column(String, nullable=False)
+    event_name = Column(Text, nullable=False)
+    event_date = Column(String)
+    summary = Column(Text, nullable=False)
+    topic_name = Column(String)
+    event_type = Column(String)
+    vendor_updated_at = Column(String)
+    matched_entity_ids = Column(JSON, nullable=False, default=list)
+    recorded_at = Column(String, nullable=False, default=now)
+    __table_args__ = (UniqueConstraint('lead_id', 'content_hash', name='uq_lead_revision_content'),)
+
+class LeadHeadline(Base):
+    __tablename__ = 'lead_headline'
+    id = Column(String, primary_key=True)
+    lead_id = Column(String, ForeignKey('lead.id'), nullable=False, index=True)
+    document_id = Column(String, ForeignKey('documents.id'), nullable=False, index=True)
+    content_hash = Column(String(64), nullable=False)
+    parser_version = Column(String, nullable=False)
+    headline = Column(Text, nullable=False)
+    source_name = Column(String)
+    link = Column(String(2048))
+    published_at = Column(String)
+    language = Column(String(16))
+    recorded_at = Column(String, nullable=False, default=now)
+    __table_args__ = (UniqueConstraint('lead_id', 'content_hash', name='uq_lead_headline_content'),)

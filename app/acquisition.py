@@ -3,6 +3,7 @@ import hashlib
 import http.client
 import ipaddress
 import os
+import random
 import socket
 import ssl
 import tempfile
@@ -35,14 +36,47 @@ class PinnedHTTPS(http.client.HTTPSConnection):
         sock=socket.create_connection((self.address,443),timeout=self.timeout)
         self.sock=self._context.wrap_socket(sock,server_hostname=self.host)
 
-def fetch_once(url, allowed_hosts):
+def licensed_credentials():
+    """Server-side binding of credential variable names to the only hosts allowed to receive them.
+
+    Without this binding a writer could name any server secret (WRITE_TOKEN, DATABASE_URL...) as a
+    credential and send it to a host they approve. Override with LICENSED_CREDENTIALS_JSON."""
+    import json
+    raw=os.getenv('LICENSED_CREDENTIALS_JSON')
+    bindings=json.loads(raw) if raw else {'PERMUTABLE_API_KEY':['copilot-api.permutable.ai']}
+    if not isinstance(bindings,dict) or any(not isinstance(h,list) or not all(isinstance(x,str) for x in h) for h in bindings.values()):
+        raise ValueError('LICENSED_CREDENTIALS_JSON must map credential names to host lists')
+    return {name:{h.lower() for h in hosts} for name,hosts in bindings.items()}
+
+def check_credential_binding(credential_ref,allowed_hosts):
+    if not credential_ref: return
+    bound=licensed_credentials().get(credential_ref)
+    if bound is None: raise ValueError('Credential '+credential_ref+' is not a registered licensed credential on this server')
+    if not allowed_hosts or not set(allowed_hosts)<=bound: raise ValueError('Credential '+credential_ref+' may only be sent to its registered hosts')
+
+def credential_headers(policy):
+    """Resolve a licensed API credential from the server environment; only its variable name is stored."""
+    if not policy.credential_ref: return {}
+    check_credential_binding(policy.credential_ref,policy.allowed_hosts)
+    value=os.environ.get(policy.credential_ref,'').strip()
+    if not value: raise ValueError('Credential '+policy.credential_ref+' is not configured on this server')
+    # Reject control/space characters up front so header errors can never echo the secret.
+    if any(not 33<=ord(c)<=126 for c in value): raise ValueError('Credential '+policy.credential_ref+' contains invalid characters')
+    return {policy.auth_header:value}
+
+def redact(message,headers):
+    for secret in (headers or {}).values():
+        if secret: message=message.replace(secret,'[redacted]')
+    return message
+
+def fetch_once(url, allowed_hosts, headers=None):
     for hop in range(4):
         host,address,parts=public_target(url,allowed_hosts)
         connection=PinnedHTTPS(host,address)
         try:
             path=parts.path or '/'
             if parts.query: path+='?'+parts.query
-            connection.request('GET',path,headers={'User-Agent':'MuniQuantEvidence/1.0 (bounded industrial research capture)', 'Accept-Encoding':'identity'})
+            connection.request('GET',path,headers={'User-Agent':'MuniQuantEvidence/1.0 (bounded industrial research capture)', 'Accept-Encoding':'identity', **(headers or {})})
             response=connection.getresponse()
             status=response.status
             if status in (301,302,303,307,308):
@@ -99,18 +133,23 @@ def register_bytes(s,storage,metadata,raw):
     s.add(SourceDocumentRelation(source_id=source.id,document_id=obj.id));s.flush()
     return obj,False
 
-def acquire_remote(s,storage,data,actor,fetch=fetch_once):
-    run=Run(status='running',pipeline_version='1.0.0',manifest={'source_id':data.source_id,'url':data.url,'adapter':'https-v1','actor':actor})
-    s.add(run);s.flush()
+def acquire_remote(s,storage,data,actor,fetch=fetch_once,adapter='https-v1'):
+    run=Run(status='running',pipeline_version='1.0.0',manifest={'source_id':data.source_id,'url':data.url,'adapter':adapter,'actor':actor})
+    # Commit before any network wait: an open write transaction would lock SQLite for the whole download.
+    s.add(run);s.commit()
+    headers={}
     try:
         source=s.get(Source,data.source_id)
         policy=s.scalar(select(SourceAccess).where(SourceAccess.source_id==data.source_id).order_by(SourceAccess.decided_at.desc(),SourceAccess.id.desc()))
         if not source or not policy or source.access_status!='permitted' or policy.status!='permitted' or not policy.allowed_hosts:
             raise ValueError('An audited permitted source-access policy with approved hosts is required')
+        headers=credential_headers(policy)
+        if policy.credential_ref: run.manifest={**run.manifest,'credential_ref':policy.credential_ref}
         for attempt in range(1,4):
             status=None
             try:
-                status,raw,media,final_url=fetch(data.url,policy.allowed_hosts)
+                # Licensed credentials travel only in headers; URLs, logs and manifests never carry them.
+                status,raw,media,final_url=fetch(data.url,policy.allowed_hosts,*([headers] if headers else []))
                 if status!=200: raise OSError('HTTP '+str(status))
                 s.add(RetrievalAttempt(run_id=run.id,url=data.url,attempt=attempt,status='success',http_status=status))
                 obj,duplicate=register_bytes(s,storage,{'source_id':data.source_id,'title':data.title,'original_url':data.url,'published_at':data.published_at.isoformat() if data.published_at else None,'media_type':media},raw)
@@ -118,11 +157,15 @@ def acquire_remote(s,storage,data,actor,fetch=fetch_once):
                 run.manifest={**run.manifest,'document_id':obj.id,'content_hash':obj.content_hash,'final_url':final_url,'access_decision_id':policy.id}
                 s.commit();return obj,duplicate,run.id
             except (OSError, http.client.HTTPException) as exc:
-                s.add(RetrievalAttempt(run_id=run.id,url=data.url,attempt=attempt,status='failed',http_status=status,error=str(exc)[:300]))
+                s.add(RetrievalAttempt(run_id=run.id,url=data.url,attempt=attempt,status='failed',http_status=status,error=redact(str(exc),headers)[:300]))
                 if status is not None and status not in (408,429,500,502,503,504): break
-                if attempt<3: time.sleep(0.25*attempt)
+                # Rate limits get exponential back-off with jitter (1 s, 2 s), as licensed APIs request.
+                if attempt<3: time.sleep(2**(attempt-1)+random.uniform(0,0.25) if status==429 else 0.25*attempt)
         raise ValueError('Retrieval failed; see attempt log')
     except ValueError as exc:
-        run.status='failed';run.manifest={**run.manifest,'error':str(exc)}
-        s.add(RetrievalAttempt(run_id=run.id,url=data.url,attempt=0,status='blocked',error=str(exc)[:300]))
-        s.commit();raise
+        message=redact(str(exc),headers)
+        run.status='failed';run.manifest={**run.manifest,'error':message}
+        s.add(RetrievalAttempt(run_id=run.id,url=data.url,attempt=0,status='blocked',error=message[:300]))
+        s.commit()
+        if message!=str(exc): raise ValueError(message) from None
+        raise

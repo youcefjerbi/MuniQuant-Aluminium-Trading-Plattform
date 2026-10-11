@@ -27,6 +27,10 @@ The complete replacement includes a [ready-to-restore fictional database and evi
 
 Python owns acquisition, parsing, transactions and unit conversion. C++ only ranks name candidates using Unicode edit distance. Its measured microbenchmark was 58.75× faster than equivalent Python; this is not an end-to-end throughput claim.
 
+## Licensed event leads (Permutable AI)
+
+Permutable AI events and headlines for aluminium (`ALI_COM`, COMEX) arrive on the **Event leads** screen as curator leads: each points to a possible curtailment, restart, outage or ownership change and shows which registered assets it mentions. Leads are not evidence. Confirm each one by capturing the primary source and recording the observation from it. Only factual feeds are captured; vendor sentiment, impact, signals and forecasts are not stored. Set `PERMUTABLE_API_KEY`, then run `python -m app.permutable setup` and schedule `python -m app.permutable poll`. See [ADR 0003](docs/adr/0003-permutable-lead-source.md) and [the runbook](docs/RUNBOOK.md).
+
 ## Start locally
 
 Requires Python 3.11+ and a C++17 compiler (Apple Command Line Tools on macOS, g++ on Linux). Python 3.12 is used in CI and the container.

@@ -14,6 +14,8 @@ Python handles network, parsing, normalization, transactions, quality and export
 
 Retrieval requires an audited approved host list, HTTPS/public addresses, pinned checked IPs with TLS hostname verification, redirect revalidation, bounded bytes and retries with attempt logs. No general crawler. Raw bytes are content-addressed and written atomically. Literal extraction recipes avoid user-supplied regular expressions. PDF extraction is text-based and bounded, with no OCR. Source rights must be reviewed before redistribution.
 
+Licensed event feeds (Permutable AI, ADR 0003) enter through the same audited, credential-referenced acquisition path as lead-only sources. Their preserved responses become curator leads; they are never cited as evidence and never cross the package boundary.
+
 ## Integrity and reproducibility
 
 Relational foreign keys and range/date constraints complement application dimension checks. Quality findings carry code, severity, affected record and remediation. BLOCK/ERROR prohibit v1 export. Stable build/candidate identifiers and parser specifications permit offline re-extraction. SHA-256 verifies snapshots, recipes and packages. Manual facts are explicitly reported as normalization-only verification.

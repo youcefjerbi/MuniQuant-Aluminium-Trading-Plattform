@@ -85,6 +85,12 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.exception_handler(IntegrityError)
     async def conflict(request, exc): return JSONResponse({'detail':'Conflicting record or invalid reference; refresh and retry'},status_code=409)
 
+    from sqlalchemy.exc import OperationalError
+    @app.exception_handler(OperationalError)
+    async def busy(request, exc):
+        if 'locked' not in str(exc.orig).lower(): raise exc
+        return JSONResponse({'detail':'The database is busy with another write; retry in a moment'},status_code=503)
+
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
         s.execute(text('SELECT 1'))
@@ -109,8 +115,8 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.get('/api/records/{record_type}')
     def records(record_type:str,offset:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=1000),s:Session=Depends(session)):
         from sqlalchemy import func
-        from .models import Candidate,EvidenceBuild,RetrievalAttempt,SourceAccess
-        models={'entities':Entity,'sources':Source,'documents':Document,'observations':Observation,'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit,'candidates':Candidate,'builds':EvidenceBuild,'retrieval_attempts':RetrievalAttempt,'source_access':SourceAccess}
+        from .models import Candidate,EvidenceBuild,RetrievalAttempt,SourceAccess,Lead,LeadRevision,LeadHeadline
+        models={'entities':Entity,'sources':Source,'documents':Document,'observations':Observation,'relationships':Relationship,'reviews':Review,'runs':Run,'audit':Audit,'candidates':Candidate,'builds':EvidenceBuild,'retrieval_attempts':RetrievalAttempt,'source_access':SourceAccess,'leads':Lead,'lead_revisions':LeadRevision,'lead_headlines':LeadHeadline}
         model=models.get(record_type)
         if model is None: raise HTTPException(404,'Unknown record type')
         return {'records':[record(o) for o in s.scalars(select(model).order_by(model.id).offset(offset).limit(limit))],'total':s.scalar(select(func.count()).select_from(model)),'offset':offset,'limit':limit}
@@ -150,7 +156,8 @@ def create_app(database_url=None, storage=None, write_token=None):
     def relationship(data:RelationshipIn,s:Session=Depends(session),actor=Depends(writer)):
         if get(s,Entity,data.company_id).kind!='company' or get(s,Entity,data.facility_id).kind!='facility':
             raise ValueError('Relationship requires a company and a facility')
-        get(s,Document,data.document_id)
+        from .services import require_citable
+        require_citable(s,get(s,Document,data.document_id))
         obj=Relationship(**data.model_dump(mode='json',exclude={'evidence_reference'})); s.add(obj); s.flush()
         from .models import CompanyFacilityRelationship
         from decimal import Decimal
@@ -225,7 +232,8 @@ def create_app(database_url=None, storage=None, write_token=None):
     from .models import EntityEvidence
     @app.post('/api/entities/{identifier}/evidence',status_code=201)
     def identity_evidence(identifier:str,data:EntityEvidenceIn,s:Session=Depends(session),actor=Depends(writer)):
-        get(s,Entity,identifier);get(s,Document,data.document_id)
+        from .services import require_citable
+        get(s,Entity,identifier);require_citable(s,get(s,Document,data.document_id))
         key=(identifier,data.document_id)
         if s.get(EntityEvidence,key): raise HTTPException(409,'Identity evidence already registered')
         obj=EntityEvidence(entity_id=identifier,**data.model_dump(),reviewer=actor);s.add(obj)
@@ -245,7 +253,15 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.post('/api/sources/{identifier}/access',status_code=201)
     def access(identifier:str,data:SourceAccessIn,s:Session=Depends(session),actor=Depends(writer)):
         source=get(s,Source,identifier)
-        obj=SourceAccess(source_id=identifier,**data.model_dump(),reviewer=actor);s.add(obj);source.access_status=data.status
+        values=data.model_dump()
+        previous=s.scalar(select(SourceAccess).where(SourceAccess.source_id==identifier).order_by(SourceAccess.decided_at.desc(),SourceAccess.id.desc()))
+        # A re-review that omits usage or credential fields keeps them; dropping them needs an explicit value.
+        if previous and 'usage_scope' not in data.model_fields_set: values['usage_scope']=previous.usage_scope
+        if previous and 'credential_ref' not in data.model_fields_set and 'auth_header' not in data.model_fields_set:
+            values['credential_ref'],values['auth_header']=previous.credential_ref,previous.auth_header
+        from .acquisition import check_credential_binding
+        check_credential_binding(values['credential_ref'],values['allowed_hosts'])
+        obj=SourceAccess(source_id=identifier,**values,reviewer=actor);s.add(obj);source.access_status=data.status
         audit(s,actor,'access_decision',obj);s.commit();return record(obj)
 
     @app.post('/api/acquire',status_code=201)
@@ -278,6 +294,34 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.get('/api/export/schema')
     def contract_schema():
         return FileResponse(Path(__file__).parent/'evidence-v1.schema.json',media_type='application/schema+json')
+
+    # Licensed Permutable feed: lead-only, factual events/headlines, never exported as evidence.
+    from .schemas import PermutableSourceIn,PermutableCaptureIn,LeadDecisionIn
+    from . import permutable
+
+    @app.post('/api/permutable/source',status_code=201)
+    def permutable_source(data:PermutableSourceIn,s:Session=Depends(session),actor=Depends(writer)):
+        source,policy=permutable.register_source(s,actor,data)
+        return {'source':record(source),'access':record(policy)}
+
+    @app.post('/api/permutable/capture')
+    def permutable_capture(data:PermutableCaptureIn,s:Session=Depends(session),actor=Depends(writer)):
+        return permutable.capture(s,app.state.storage,actor,data)
+
+    @app.post('/api/permutable/documents/{identifier}/replay')
+    def permutable_replay(identifier:str,s:Session=Depends(session),actor=Depends(writer)):
+        return permutable.replay_document(s,app.state.storage,identifier)
+
+    @app.get('/api/leads')
+    def leads(status:str|None=Query(None,pattern='^(new|follow_up|dismissed|confirmed)$'),topic:str|None=Query(None,max_length=200),matched:bool|None=None,
+              offset:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=500),s:Session=Depends(session)):
+        return {**permutable.list_leads(s,status,offset,limit,topic,matched),'source_id':permutable.SOURCE_ID}
+
+    @app.post('/api/leads/{identifier}/decision')
+    def lead_decision(identifier:str,data:LeadDecisionIn,s:Session=Depends(session),actor=Depends(writer)):
+        try: return record(permutable.decide(s,identifier,data,actor))
+        except LookupError: raise HTTPException(404,'Lead not found')
+        except permutable.LeadConflict as exc: raise HTTPException(409,str(exc))
 
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     @app.get('/',include_in_schema=False)

@@ -5,7 +5,7 @@ from pathlib import Path
 import hashlib
 import re
 from sqlalchemy import select
-from .models import Entity, Source, Document, Observation, ObservationDetail, Candidate, SourceAccess, DocumentVersion, SourceSnapshot, EntityEvidence, CompanyFacilityRelationship, Relationship
+from .models import Entity, Source, Document, Observation, ObservationDetail, Candidate, EvidenceBuild, SourceAccess, DocumentVersion, SourceSnapshot, EntityEvidence, CompanyFacilityRelationship, Relationship
 from .services import normalize_value
 
 def inspect_quality(s,storage):
@@ -17,33 +17,44 @@ def inspect_quality(s,storage):
     sources={o.id:o for o in s.scalars(select(Source))}
     documents={o.id:o for o in s.scalars(select(Document))}
     counts=Counter(d.content_hash for d in documents.values())
+    latest={}
+    for policy in s.scalars(select(SourceAccess).order_by(SourceAccess.decided_at,SourceAccess.id)): latest[policy.source_id]=policy
+    lead_docs={d.id for d in documents.values() if latest.get(d.source_id) is not None and latest[d.source_id].usage_scope=='leads_only'}
+    def cites_lead(kind,identifier,document_id):
+        if document_id in lead_docs:
+            add('LEAD_SOURCE_CITED','BLOCK',kind,identifier,'Lead-only licensed feed is cited as evidence; cite the primary source instead')
     for entity in entities.values():
         if not s.scalar(select(EntityEvidence).where(EntityEvidence.entity_id==entity.id)):
             add('MISSING_ASSET_EVIDENCE','WARN','entity',entity.id,'Curated identity has no explicit source locator')
     for doc in documents.values():
+        def add_doc(code,severity,message,doc=doc):
+            # Lead-only documents never enter the package, so their integrity findings cannot block export.
+            if doc.id in lead_docs and severity=='BLOCK': severity,message='INFO',message+' (lead-only document; excluded from export)'
+            add(code,severity,'document',doc.id,message)
         source=sources.get(doc.source_id)
         if not source or not source.publisher or not source.url or not source.name:
-            add('MISSING_SOURCE_METADATA','BLOCK','document',doc.id,'Source metadata is incomplete')
+            add_doc('MISSING_SOURCE_METADATA','BLOCK','Source metadata is incomplete')
         if source and source.access_status not in ('permitted','synthetic'):
-            add('ACCESS_NOT_PERMITTED','BLOCK','document',doc.id,'Source access is not permitted')
+            add_doc('ACCESS_NOT_PERMITTED','BLOCK','Source access is not permitted')
         policy=s.scalar(select(SourceAccess).where(SourceAccess.source_id==doc.source_id).order_by(SourceAccess.decided_at.desc(),SourceAccess.id.desc()))
-        if policy and policy.status!='permitted': add('ACCESS_REVOKED','BLOCK','document',doc.id,'Latest audited source-access decision blocks export')
-        if not policy and source and source.source_type!='synthetic': add('MISSING_ACCESS_AUDIT','WARN','document',doc.id,'Source has no audited access decision')
-        if not doc.published_at: add('MISSING_PUBLICATION_DATE','WARN','document',doc.id,'Source publication date is unknown')
+        if policy and policy.status!='permitted': add_doc('ACCESS_REVOKED','BLOCK','Latest audited source-access decision blocks export')
+        if not policy and source and source.source_type!='synthetic': add_doc('MISSING_ACCESS_AUDIT','WARN','Source has no audited access decision')
+        # Lead-feed snapshots are curator work items, not evidence, so an unknown publication date is expected.
+        if not doc.published_at and doc.id not in lead_docs: add_doc('MISSING_PUBLICATION_DATE','WARN','Source publication date is unknown')
         try:
             if doc.published_at and date.fromisoformat(doc.published_at)>date.fromisoformat(doc.retrieved_at[:10]):
-                add('PUBLICATION_AFTER_RETRIEVAL','BLOCK','document',doc.id,'Publication is after retrieval date')
-        except ValueError: add('INVALID_DOCUMENT_DATE','BLOCK','document',doc.id,'Invalid source date')
+                add_doc('PUBLICATION_AFTER_RETRIEVAL','BLOCK','Publication is after retrieval date')
+        except ValueError: add_doc('INVALID_DOCUMENT_DATE','BLOCK','Invalid source date')
         if not re.fullmatch(r'[a-f0-9]{64}',doc.content_hash):
-            add('INVALID_CONTENT_HASH','BLOCK','document',doc.id,'Malformed content hash')
+            add_doc('INVALID_CONTENT_HASH','BLOCK','Malformed content hash')
             continue
         path=Path(storage)/doc.content_hash
-        if not path.is_file(): add('MISSING_SNAPSHOT','BLOCK','document',doc.id,'Raw snapshot is missing')
+        if not path.is_file(): add_doc('MISSING_SNAPSHOT','BLOCK','Raw snapshot is missing')
         elif path.stat().st_size>10_000_000 or hashlib.sha256(path.read_bytes()).hexdigest()!=doc.content_hash:
-            add('CORRUPT_SNAPSHOT','BLOCK','document',doc.id,'Raw snapshot does not match its content hash')
+            add_doc('CORRUPT_SNAPSHOT','BLOCK','Raw snapshot does not match its content hash')
         if not s.get(DocumentVersion,doc.id) or not s.get(SourceSnapshot,doc.content_hash):
-            add('MISSING_VERSION_METADATA','BLOCK','document',doc.id,'Version/snapshot registry linkage is absent')
-        if counts[doc.content_hash]>1: add('DUPLICATE_CONTENT','INFO','document',doc.id,'Identical bytes occur under distinct provenance')
+            add_doc('MISSING_VERSION_METADATA','BLOCK','Version/snapshot registry linkage is absent')
+        if counts[doc.content_hash]>1: add_doc('DUPLICATE_CONTENT','INFO','Identical bytes occur under distinct provenance')
     seen=set()
     historical={}
     for obs in s.scalars(select(Observation).order_by(Observation.id)):
@@ -51,6 +62,7 @@ def inspect_quality(s,storage):
         if not entity or entity.kind!='facility': add('UNRESOLVED_ENTITY','BLOCK','observation',obs.id,'Observation has no valid facility identity')
         if obs.document_id not in documents or not obs.evidence_reference:
             add('MISSING_PROVENANCE','BLOCK','observation',obs.id,'Exact document and evidence locator are required')
+        cites_lead('observation',obs.id,obs.document_id)
         detail=s.get(ObservationDetail,obs.id)
         if not detail: add('MISSING_EXACT_OBSERVATION','BLOCK','observation',obs.id,'Exact numeric/native date representation is absent')
         try:
@@ -83,6 +95,7 @@ def inspect_quality(s,storage):
             add('INVALID_RELATIONSHIP','BLOCK','relationship',link.id,'Relationship requires company, facility, exact dates and source evidence')
         elif 'legacy' in exact.evidence_reference.lower():
             add('IMPRECISE_RELATIONSHIP_LOCATOR','WARN','relationship',link.id,'Legacy relationship needs a precise document locator')
+        cites_lead('relationship',link.id,link.document_id)
         if exact and exact.role=='OWNS' and exact.percentage is not None:
             ownership.setdefault(exact.facility_id,[]).append(exact)
     for facility_id,shares in ownership.items():
@@ -94,6 +107,8 @@ def inspect_quality(s,storage):
             if sum(by_company.values())>100:
                 add('OWNERSHIP_TOTAL_EXCEEDS_100','WARN','entity',facility_id,'Overlapping ownership evidence exceeds 100%; investigate dates and conflicting source vintages')
                 break
+    for link in s.scalars(select(EntityEvidence)): cites_lead('entity',link.entity_id,link.document_id)
+    for build in s.scalars(select(EvidenceBuild)): cites_lead('build',build.id,build.document_id)
     for candidate in s.scalars(select(Candidate)):
         if candidate.status=='resolved' and (not candidate.entity_id or not candidate.observation_id):
             add('INCOMPLETE_RESOLVED_CANDIDATE','BLOCK','candidate',candidate.id,'Resolved candidate is missing its persisted observation')
