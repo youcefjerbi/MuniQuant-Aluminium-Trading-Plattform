@@ -91,6 +91,8 @@ def snapshot_bytes(storage,doc):
 def extract(s,storage,document_id,data,actor):
     doc=s.get(Document,document_id)
     if not doc: raise ValueError('Unknown document')
+    from .services import require_citable
+    require_citable(s,doc)
     spec=data.model_dump(mode='json')
     build_id=logical_hash({'document_id':doc.id,'content_hash':doc.content_hash,'parser_version':PARSER_VERSION,'pipeline_version':PIPELINE_VERSION,'specification':spec})
     existing=s.get(EvidenceBuild,build_id)
