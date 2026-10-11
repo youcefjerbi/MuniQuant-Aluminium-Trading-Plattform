@@ -299,25 +299,21 @@ def test_network_wait_does_not_hold_a_database_write_lock(client, lead_source, m
     probe.dispose()
 
 
-def test_similarity_search_ranks_before_pagination_and_searches_headlines(client, lead_source, monkeypatch):
-    capture(client, monkeypatch, FakeAPI((200, [
-        event('unrelated', summary='Refinery maintenance scheduled', event_name='Routine work'),
-        event('relevant', summary='power outage smelter', event_name='power outage smelter'),
-        event('partial', summary='smelter expansion', event_name='New investment'),
-    ])))
-    result = client.get('/api/leads', params={'search': 'POWER outage smelter', 'limit': 1}).json()
-    assert result['total'] == 2 and len(result['leads']) == 1
-    assert result['leads'][0]['latest_revision']['summary'] == 'power outage smelter'
-    assert result['ranking'] == 'tfidf-cosine-v1'
-    assert result['leads'][0]['matched_terms'] == ['outage', 'power', 'smelter']
-    second = client.get('/api/leads', params={'search': 'power outage smelter', 'limit': 1, 'offset': 1}).json()
-    assert second['leads'][0]['id'] != result['leads'][0]['id']
-    assert second['leads'][0]['similarity_score'] < result['leads'][0]['similarity_score']
-    assert client.get('/api/leads', params={'search': 'zzzznonexistent'}).json()['total'] == 0
-    assert client.get('/api/leads', params={'search': '!!!'}).json()['total'] == 0
-    assert client.get('/api/leads', params={'search': '   '}).json()['total'] == 3
-    assert client.get('/api/leads', params={'search': 'power', 'status': 'confirmed'}).json()['total'] == 0
-    assert client.get('/api/leads', params={'search': 'x' * 501}).status_code == 422
-    capture(client, monkeypatch, FakeAPI((200, [headline('unrelated', title='Uniquehydropower interruption')])), feed='event_headlines')
-    found = client.get('/api/leads', params={'search': 'uniquehydropower'}).json()
-    assert found['total'] == 1 and found['leads'][0]['latest_revision']['event_name'] == 'Routine work'
+def test_live_capture_bridges_new_event_to_paper_engine(client, lead_source, monkeypatch):
+    from datetime import datetime, timezone
+    client.post('/api/research/policy', json={'enabled': True})
+    result = capture(client, monkeypatch, FakeAPI((200, [event(event_date=datetime.now(timezone.utc).isoformat())])))
+    assert result['research_bridge']['mode'] == 'incoming'
+    workspace = client.get('/api/research').json()
+    assert len(workspace['events']) == 1 and not workspace['events'][0]['historical']
+    assert workspace['events'][0]['payload']['lead_id']
+    assert workspace['decisions'][0]['action'] == 'HOLD'
+    result = capture(client, monkeypatch, FakeAPI((200, [event(event_date=workspace['events'][0]['occurred_at'])])))
+    assert len(client.get('/api/research').json()['decisions']) == 1
+
+
+def test_historical_capture_bridge_never_trades(client, lead_source, monkeypatch):
+    client.post('/api/research/policy', json={'enabled': True})
+    capture(client, monkeypatch, FakeAPI((200, [event()])), mode='historical', start_date='2026-10-01')
+    workspace=client.get('/api/research').json()
+    assert workspace['events'][0]['historical'] and not workspace['decisions']

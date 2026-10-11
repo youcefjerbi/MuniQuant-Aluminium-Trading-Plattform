@@ -399,5 +399,9 @@ class LeadHeadline(Base):
     recorded_at = Column(String, nullable=False, default=now)
     __table_args__ = (UniqueConstraint('lead_id', 'content_hash', name='uq_lead_headline_content'),)
 
-# Manual investigations are separate from vendor event ingestion.
+# Import the isolated experimental models so Alembic sees the complete metadata.
+from . import research_models  # noqa: E402,F401
+
+from . import asset_map  # noqa: E402,F401
+
 from . import investigations  # noqa: E402,F401
