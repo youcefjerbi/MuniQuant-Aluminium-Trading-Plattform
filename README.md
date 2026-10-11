@@ -31,9 +31,13 @@ Python owns acquisition, parsing, transactions and unit conversion. C++ only ran
 
 Permutable AI events and headlines for aluminium (`ALI_COM`, COMEX) arrive on the **Event leads** screen as curator leads: each points to a possible curtailment, restart, outage or ownership change and shows which registered assets it mentions. Leads are not evidence. Confirm each one by capturing the primary source and recording the observation from it. Only factual feeds are captured; vendor sentiment, impact, signals and forecasts are not stored. Set `PERMUTABLE_API_KEY`, then run `python -m app.permutable setup` and schedule `python -m app.permutable poll`. See [ADR 0003](docs/adr/0003-permutable-lead-source.md) and [the runbook](docs/RUNBOOK.md).
 
-## Start locally
+## Starting guide: run locally with Python
 
 Requires Python 3.11+ and a C++17 compiler (Apple Command Line Tools on macOS, g++ on Linux). Python 3.12 is used in CI and the container.
+
+On macOS, install the compiler if needed with `xcode-select --install`, and complete the installation before continuing.
+
+Open a terminal in the cloned `MuniQuant-Aluminium-Trading-Plattform` folder (the folder containing this README and `requirements.lock`). Run the following commands in the same terminal:
 
 ```sh
 python3 -m venv .venv
@@ -41,15 +45,17 @@ source .venv/bin/activate
 pip install -r requirements.lock
 pip install --no-build-isolation -e .
 alembic upgrade head
-python -m app.seed  # optional: fictional demonstration dataset
+python -m app.seed
 export WRITE_TOKEN="$(python -c 'import secrets; print(secrets.token_hex(24))')"
-export WRITE_ACTOR="pilot-curator"
-# Copy the token into the UI's Workspace access dialog to enable writes.
 printf '%s\n' "$WRITE_TOKEN"
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open [the workspace](http://127.0.0.1:8000) and [API documentation](http://127.0.0.1:8000/docs). Without `WRITE_TOKEN`, read access works but all mutations are disabled. The browser retains the token only until reload.
+Keep the terminal open while using the application. Once the server has started, open [the workspace](http://127.0.0.1:8000) in your browser. Open **Workspace access** and paste the token printed immediately before the server started to enable editing. The browser retains the token only until reload. API documentation is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+The seed command adds fictional demonstration data; omit it if you want an empty workspace. This address runs on your computer; cloning the repository does not create a public hosted website.
+
+To stop the server, press **Ctrl+C**. To start it again, activate the environment with `source .venv/bin/activate`, generate and print a new `WRITE_TOKEN` using the commands above, and run the `uvicorn` command again. Your database and evidence files remain saved. Without `WRITE_TOKEN`, read access works but all mutations are disabled.
 
 SQLite is the default local database at `data/muniquant.db`. PostgreSQL is the shared deployment target. Set `DATABASE_URL` before running migrations and the app to use it.
 
