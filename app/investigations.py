@@ -43,6 +43,10 @@ class EntryIn(BaseModel):
     text: str = Field(min_length=1,max_length=10000)
     document_id: str | None = Field(default=None,max_length=100)
     source_url: str | None = Field(default=None,max_length=2000)
+    stance: Literal['supports','contradicts','context'] = 'context'
+    hypothesis_id: str | None = Field(default=None,max_length=100)
+    passage: str = Field(default='',max_length=10000)
+    published_at: str | None = Field(default=None,max_length=40)
     @model_validator(mode='after')
     def evidence_source(self):
         if self.kind == 'evidence' and not (self.document_id or self.source_url):
@@ -53,6 +57,16 @@ class EntryIn(BaseModel):
                 raise ValueError('Use an HTTP(S) source URL without credentials')
         return self
 
+class TaskIn(BaseModel):
+    model_config = ConfigDict(extra='forbid',str_strip_whitespace=True)
+    id: str | None = Field(default=None,max_length=100)
+    question: str = Field(min_length=1,max_length=2000)
+    assignee: str = Field(default='',max_length=200)
+    due_at: str | None = Field(default=None,max_length=40)
+    status: Literal['open','in_progress','answered','cancelled'] = 'open'
+    answer: str = Field(default='',max_length=10000)
+    evidence_entry_ids: list[str] = Field(default_factory=list,max_length=100)
+
 class RevisionIn(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     expected_version: int = Field(ge=1)
@@ -60,6 +74,7 @@ class RevisionIn(BaseModel):
     owner: str | None = Field(default=None,max_length=200)
     review_at: str | None = None
     entry: EntryIn | None = None
+    task: TaskIn | None = None
 
 class CaseConflict(Exception):
     pass
@@ -82,7 +97,7 @@ def create(s, data, actor):
         if not s.get(Entity, identifier):
             raise ValueError('Affected asset is not registered')
     payload['review_at']=review_time(payload['review_at'])
-    payload.update(status='investigating',entries=[])
+    payload.update(status='investigating',entries=[],tasks=[])
     case=Investigation(title=data.title,status='investigating',version=1,snapshot=payload)
     s.add(case);s.flush()
     s.add(InvestigationRevision(case_id=case.id,version=1,actor=actor,snapshot=payload))
@@ -98,8 +113,31 @@ def revise(s, case, data, actor):
         entry=data.entry.model_dump()
         if entry['document_id'] and not s.get(Document,entry['document_id']):
             raise ValueError('Evidence document is not registered')
+        if entry['hypothesis_id'] and not any(e['id']==entry['hypothesis_id'] and e['kind']=='hypothesis' for e in snapshot['entries']):
+            raise ValueError('Hypothesis must belong to this investigation')
+        if entry['published_at']: entry['published_at']=review_time(entry['published_at'])
         entry.update(id=uid(),actor=actor,recorded_at=now())
         snapshot['entries'].append(entry)
+    if data.task:
+        task=data.task.model_dump()
+        task['due_at']=review_time(task['due_at'])
+        task['evidence_entry_ids']=list(dict.fromkeys(task['evidence_entry_ids']))
+        evidence={e['id'] for e in snapshot['entries'] if e['kind']=='evidence'}
+        if any(i not in evidence for i in task['evidence_entry_ids']):
+            raise ValueError('Task evidence must reference evidence in this case')
+        if task['status']=='answered' and (not task['answer'] or not task['evidence_entry_ids']):
+            raise ValueError('Answered tasks require an answer and case evidence')
+        tasks=snapshot.setdefault('tasks',[])
+        task.update(updated_by=actor,updated_at=now())
+        if task['id']:
+            old=next((t for t in tasks if t['id']==task['id']),None)
+            if not old: raise ValueError('Task does not belong to this case')
+            task.update(created_by=old['created_by'],created_at=old['created_at'])
+            tasks[tasks.index(old)]=task
+        else:
+            if len(tasks)>=200: raise ValueError('A case supports at most 200 tasks')
+            task.update(id=uid(),created_by=actor,created_at=now())
+            tasks.append(task)
     if data.owner is not None: snapshot['owner']=data.owner
     if 'review_at' in data.model_fields_set: snapshot['review_at']=review_time(data.review_at)
     if data.status is not None: snapshot['status']=data.status
