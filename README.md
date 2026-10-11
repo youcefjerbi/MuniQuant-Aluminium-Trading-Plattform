@@ -37,6 +37,12 @@ Python owns acquisition, parsing, transactions and unit conversion. C++ only ran
 
 Permutable AI events and headlines for aluminium (`ALI_COM`, COMEX) arrive on the **Event leads** screen as curator leads: each points to a possible curtailment, restart, outage or ownership change and shows which registered assets it mentions. Leads are not evidence. Confirm each one by capturing the primary source and recording the observation from it. Only factual feeds are captured; vendor sentiment, impact, signals and forecasts are not stored. Set `PERMUTABLE_API_KEY`, then run `python -m app.permutable setup` and schedule `python -m app.permutable poll`. See [ADR 0003](docs/adr/0003-permutable-lead-source.md) and [the runbook](docs/RUNBOOK.md).
 
+## Search events by text similarity
+
+On **Event leads**, enter a query such as `smelter power outage` and click **Search**. Events with shared words appear in similarity order, with a score and matched terms. Status, topic and asset filters still apply. Clear the query and click Search to restore newest-first ordering.
+
+The API supports `GET /api/leads?search=smelter%20power%20outage&limit=20&offset=0`. Ranking uses offline TF-IDF cosine similarity across the latest event title and summary, topic, matched asset names and all linked headlines. It ranks the entire filtered set before pagination. Scores measure lexical overlap, not probabilities or market impact; synonyms and translated equivalents are not inferred. No external AI service or database migration is required. Search currently scans the filtered corpus in memory; a persistent search index is needed before large-scale deployment.
+
 ## Starting guide: run locally with Python
 
 Requires Python 3.11+ and a C++17 compiler (Apple Command Line Tools on macOS, g++ on Linux). Python 3.12 is used in CI and the container.
