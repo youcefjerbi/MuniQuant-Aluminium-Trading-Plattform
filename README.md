@@ -133,6 +133,6 @@ docs/               Architecture, decisions, backlog and operations
 
 Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads are open by default on loopback. Enable REQUIRE_READ_AUTH and configure TLS/private ingress before shared deployment. No license for redistribution of third-party source data is implied by this repository.
 
-## Geographic asset dependency map
+## Manual disruption investigations
 
-Open **Asset map** to browse countries, register sourced locations and connect industrial assets by product. Filter associations by product and effective date. The bundled world basemap requires no external map service. See [the map guide](docs/ASSET_MAP.md); run `alembic upgrade head` after updating.
+Open **Investigations** to create analyst-led cases independently of Permutable API events. Collect sourced evidence, hypotheses, contradictions and questions; track conclusions, investigator and review dates with a preserved revision history. Run `alembic upgrade head` after updating. See [the investigation guide](docs/INVESTIGATIONS.md).
