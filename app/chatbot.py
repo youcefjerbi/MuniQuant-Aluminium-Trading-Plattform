@@ -1,5 +1,7 @@
 """Read-only trader assistant with bounded retrieval and optional AI synthesis."""
 import json
+import asyncio
+import httpx
 import os
 import re
 from threading import BoundedSemaphore
@@ -175,7 +177,7 @@ def local_answer(scope, sources):
     return '\n\n'.join(lines)
 
 
-def synthesize(data, scope, sources):
+def provider_payload(data, scope, sources):
     payload = {
         'model':os.environ['CHAT_MODEL'], 'store':False, 'max_output_tokens':1200,
         'instructions':(
@@ -192,6 +194,11 @@ def synthesize(data, scope, sources):
             {'role':'user','content':json.dumps({'question':data.message,'scope':scope,
                                                'retrieved_at':now(),'records':sources})}],
     }
+    return payload
+
+
+def synthesize(data, scope, sources):
+    payload = provider_payload(data, scope, sources)
     request = Request('https://api.openai.com/v1/responses', data=json.dumps(payload).encode(),
                       headers={'Authorization':'Bearer '+os.environ['OPENAI_API_KEY'],
                                'Content-Type':'application/json'}, method='POST')
@@ -233,3 +240,82 @@ def answer(s, data):
     return {'answer':reply,'sources':sources,'scope':scope,'mode':mode,
             'warning':warning,'retrieved_at':now(),
             'limitations':'Stored information may be stale or incomplete. Decision support only; no live execution.'}
+
+
+def stream_event(kind, **data):
+    return 'event: '+kind+'\ndata: '+json.dumps(data)+'\n\n'
+
+
+def validate_answer(text, sources):
+    citations = re.findall(r'\[S(\d+)\]', text)
+    if not text.strip() or not citations or any(int(n)<1 or int(n)>len(sources) for n in citations):
+        raise ValueError('Provider response has invalid citations')
+
+
+async def provider_deltas(data, scope, sources):
+    payload = provider_payload(data, scope, sources)
+    payload['stream'] = True
+    # Async transport closes immediately when the browser disconnect cancels the iterator.
+    async with httpx.AsyncClient(timeout=20) as client:
+        async with client.stream('POST', 'https://api.openai.com/v1/responses',
+                json=payload, headers={'Authorization':'Bearer '+os.environ['OPENAI_API_KEY']}) as response:
+            response.raise_for_status()
+            total = 0
+            completed = False
+            async for line in response.aiter_lines():
+                total += len(line.encode())
+                if total > 2_000_000:
+                    raise ValueError('Provider response too large')
+                if not line.startswith('data:'):
+                    continue
+                event = json.loads(line[5:].strip())
+                kind = event.get('type')
+                if kind == 'response.output_text.delta':
+                    yield event['delta']
+                elif kind == 'response.completed':
+                    if event.get('response', {}).get('status') != 'completed':
+                        raise ValueError('Provider response incomplete')
+                    completed = True
+                    break
+                elif kind in ('error', 'response.failed', 'response.incomplete'):
+                    raise ValueError('Provider response failed')
+            if not completed:
+                raise ValueError('Provider stream ended before completion')
+
+
+async def stream_answer(data, scope, sources):
+    retrieved_at = now()
+    yield stream_event('meta', sources=sources, scope=scope, retrieved_at=retrieved_at)
+    reply = local_answer(scope, sources)
+    mode, warning = 'local', None
+    if data.use_ai and sources:
+        if not SLOTS.acquire(blocking=False):
+            warning = 'AI summaries are busy; showing stored records.'
+        else:
+            try:
+                yield stream_event('state', mode='ai', warning='AI draft · citation checks pending; confirm claims against sources.')
+                chunks = []
+                async with asyncio.timeout(45):
+                    async for delta in provider_deltas(data, scope, sources):
+                        if not isinstance(delta, str):
+                            raise ValueError('Invalid text delta')
+                        chunks.append(delta)
+                        if sum(map(len, chunks)) > 10000:
+                            raise ValueError('Provider answer too large')
+                        yield stream_event('delta', text=delta)
+                candidate = ''.join(chunks)
+                validate_answer(candidate, sources)
+                reply, mode = candidate, 'ai'
+            except (httpx.HTTPError, TimeoutError, ValueError, KeyError, TypeError, OSError):
+                warning = 'AI summary unavailable or citation check failed; showing stored records.'
+                yield stream_event('reset', warning=warning)
+            finally:
+                SLOTS.release()
+    if mode == 'local':
+        yield stream_event('state', mode='local', warning=warning)
+        # Stored replies are precomputed: pacing improves readability, not AI generation.
+        for word in re.findall(r'\S+\s*', reply):
+            yield stream_event('delta', text=word)
+            await asyncio.sleep(0.018)
+    yield stream_event('done', answer=reply, mode=mode, warning=warning,
+        retrieved_at=retrieved_at, limitations='Citation identifiers checked; claims still require source review. No live execution.')

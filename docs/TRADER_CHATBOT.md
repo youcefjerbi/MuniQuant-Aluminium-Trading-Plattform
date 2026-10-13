@@ -39,6 +39,19 @@ paid AI broadly; the per-process concurrency guard is not a distributed quota.
 
 ## Retrieval and limits
 
+POST /api/chat/stream accepts the same payload and returns server-sent events.
+The browser renders streamed text through textContent. Local excerpts are computed
+first and displayed word by word; this is paced display, not model generation.
+Configured AI uses stream=true and relays response.output_text.delta as it arrives.
+AI text is labeled an unchecked draft until completion and citation-ID validation.
+Validation checks identifiers, not whether each claim follows from its source.
+Failed or invalid drafts are removed and replaced by local source excerpts.
+Stop response or Clear chat cancels the fetch; partial drafts are discarded and
+never enter chat history. Browser disconnect cancellation closes the asynchronous
+provider connection and releases its concurrency slot. The network read timeout
+is 20 seconds and the entire provider stream is bounded to 45 seconds. Ingress
+proxies must permit streaming and honor X-Accel-Buffering: no.
+
 POST /api/chat accepts message (1–1000 characters), scope, up to eight history
 turns (user/assistant only) and use_ai=false. GET /api/chat/status reports whether
 AI is configured, never the secret or model configuration. Private-read
@@ -69,5 +82,7 @@ explicit/authenticated AI selection, bounded stateless provider payloads and
 failure/invalid-citation fallback. Provider tests use synthetic mocked responses;
 a paid live-provider request is not part of the tests.
 
-Integration reference:
+Integration references:
 https://developers.openai.com/api/docs/guides/text
+https://developers.openai.com/api/docs/guides/streaming-responses
+https://developers.openai.com/api/reference/resources/responses/streaming-events

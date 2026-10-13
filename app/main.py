@@ -8,7 +8,7 @@ import hashlib
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
@@ -59,7 +59,7 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.middleware('http')
     async def request_log(request, call_next):
         start=time.monotonic()
-        if app.state.require_read_auth and (request.method=='GET' or request.url.path=='/api/chat') and request.url.path.startswith('/api/') and request.url.path!='/api/health':
+        if app.state.require_read_auth and (request.method=='GET' or request.url.path in ('/api/chat','/api/chat/stream')) and request.url.path.startswith('/api/') and request.url.path!='/api/health':
             token=request.headers.get('authorization','').removeprefix('Bearer ')
             allowed=[app.state.write_token,app.state.read_token,*json.loads(os.getenv('WRITE_IDENTITIES_JSON') or '{}')]
             if not token or not any(credential and secrets.compare_digest(token,credential) for credential in allowed):
@@ -170,6 +170,16 @@ def create_app(database_url=None, storage=None, write_token=None):
             if not chatbot.ai_enabled():
                 raise HTTPException(503,'AI summaries are not configured; use local mode')
         return chatbot.answer(s,data)
+
+    @app.post('/api/chat/stream')
+    def chat_stream(data:chatbot.ChatIn,request:Request,s:Session=Depends(session)):
+        if data.use_ai:
+            writer(request)
+            if not chatbot.ai_enabled():
+                raise HTTPException(503,'AI summaries are not configured; use local mode')
+        scope, sources = chatbot.retrieve(s,data)
+        return StreamingResponse(chatbot.stream_answer(data,scope,sources), media_type='text/event-stream',
+            headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
 
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
