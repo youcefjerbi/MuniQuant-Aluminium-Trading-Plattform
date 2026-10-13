@@ -452,7 +452,7 @@ def create_app(database_url=None, storage=None, write_token=None):
                      interval:str=Query('D',pattern=r'^(15|60|D|W)$')):
         from urllib.parse import quote
         config={'autosize':True,'width':'100%','height':'100%','symbol':symbol,'interval':interval,
-                'timezone':'Etc/UTC','theme':'light','style':'1','locale':'en','allow_symbol_change':False,
+                'timezone':'Etc/UTC','theme':'dark','style':'1','locale':'en','allow_symbol_change':False,
                 'hide_side_toolbar':False,'calendar':False,'support_host':'https://www.tradingview.com',
                 'utm_source':'muniquant','utm_medium':'widget_new','utm_campaign':'advanced-chart'}
         url='https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en#'+quote(json.dumps(config))
