@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import Column, String, Integer, BigInteger, Float, Text, ForeignKey, JSON, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Integer, BigInteger, Float, Text, ForeignKey, JSON, CheckConstraint, UniqueConstraint, Index, func, literal_column
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -356,15 +356,24 @@ class Lead(Base):
     topic_name = Column(String)
     vendor_updated_at = Column(String)
     current_revision_hash = Column(String(64))
+    search_text = Column(Text, nullable=False, default='', server_default='')
     matched_entity_count = Column(Integer, nullable=False, default=0, server_default='0')
     reviewer = Column(String)
     reason = Column(Text)
     decided_at = Column(String)
     primary_document_id = Column(String, ForeignKey('documents.id'))
     observation_id = Column(String, ForeignKey('observations.id'))
-    __table_args__ = (UniqueConstraint('source_id', 'external_id', name='uq_lead_source_external'),
+    __table_args__ = (Index('ix_lead_status_date', 'status', 'event_date', 'last_seen_at', 'id'),
+                      Index('ix_lead_topic_date', 'topic_name', 'event_date', 'last_seen_at', 'id'),
+                      Index('ix_lead_date_seen', 'event_date', 'last_seen_at', 'id'),
+                      UniqueConstraint('source_id', 'external_id', name='uq_lead_source_external'),
                       CheckConstraint("status IN ('new','follow_up','dismissed','confirmed')", name='ck_lead_status'),
                       CheckConstraint("status <> 'confirmed' OR primary_document_id IS NOT NULL", name='ck_lead_confirmed_evidence'))
+
+# Match the production expression index in schema metadata.
+Index('ix_lead_search_gin',
+      func.to_tsvector(literal_column("'simple'::regconfig"), Lead.search_text),
+      postgresql_using='gin', _table=Lead.__table__).ddl_if(dialect='postgresql')
 
 class LeadRevision(Base):
     """One distinct factual state of a vendor event, kept with the first snapshot that carried it."""
