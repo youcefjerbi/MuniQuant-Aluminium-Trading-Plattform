@@ -3,6 +3,6 @@ html,body,#geography{height:100%;width:100%;margin:0}#map-health{position:absolu
 
 .leaflet-container{background:#080b0a;color:#e6eee9}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip,.leaflet-tooltip{background:#111713;color:#e6eee9;border-color:#2b3a30}
-.leaflet-bar a,.leaflet-control-attribution{background:#111713;color:#e6eee9}
+.leaflet-bar a,.leaflet-container .leaflet-control-attribution{background:#111713;color:#e6eee9}
 .leaflet-bar a:hover{background:#182d20}
 .leaflet-control-attribution a,.leaflet-container a.leaflet-popup-close-button{color:#4ade80}
