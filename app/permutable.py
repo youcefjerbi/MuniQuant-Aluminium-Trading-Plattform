@@ -278,15 +278,33 @@ def decide(s, lead_id, data, actor):
     return lead
 
 def list_leads(s, status=None, offset=0, limit=100, topic=None, matched=None, search=None):
-    from .event_search import rank
+    from .event_search import rank, tokens
+    from sqlalchemy import text
     search = search.strip() if search else ""
     filters = []
     if status: filters.append(Lead.status == status)
     if topic: filters.append(Lead.topic_name == topic)
     if matched is not None: filters.append(Lead.matched_entity_count > 0 if matched else Lead.matched_entity_count == 0)
     query = select(Lead).where(*filters).order_by(Lead.event_date.desc().nulls_last(), Lead.last_seen_at.desc(), Lead.id)
-    names = {e.id: e.name for e in s.scalars(select(Entity))}
-    page = s.scalars(query if search else query.offset(offset).limit(limit)).all()
+    indexed = bool(search and s.bind.dialect.name == 'postgresql')
+    scores = {}
+    if indexed:
+        # The expression exactly matches the GIN index; filtering, ranking and
+        # pagination happen in PostgreSQL, before any ORM objects are hydrated.
+        vector = func.to_tsvector(text("'simple'::regconfig"), Lead.search_text)
+        terms = tokens(search)
+        tsquery = func.to_tsquery(text("'simple'::regconfig"), ' | '.join(terms))
+        filters.append(vector.op('@@')(tsquery))
+        score = func.ts_rank_cd(vector, tsquery, 32)
+        rows = s.execute(select(Lead, score.label('score')).where(*filters)
+                         .order_by(score.desc(), Lead.event_date.desc().nulls_last(),
+                                   Lead.last_seen_at.desc(), Lead.id)
+                         .offset(offset).limit(limit)).all()
+        page = [row[0] for row in rows]
+        scores = {row[0].id: float(row[1]) for row in rows}
+    else:
+        page = s.scalars(query if search else query.offset(offset).limit(limit)).all()
+    names = {}
     ids = [lead.id for lead in page]
     revisions_of, headlines_of = {}, {}
     # Two batched queries for the whole page instead of two per lead.
@@ -294,6 +312,9 @@ def list_leads(s, status=None, offset=0, limit=100, topic=None, matched=None, se
         revisions_of.setdefault(revision.lead_id, []).append(revision)
     for item in s.scalars(select(LeadHeadline).where(LeadHeadline.lead_id.in_(ids)).order_by(LeadHeadline.published_at.desc(), LeadHeadline.id)):
         headlines_of.setdefault(item.lead_id, []).append(item)
+    entity_ids = {i for revisions in revisions_of.values() for r in revisions for i in r.matched_entity_ids}
+    if entity_ids:
+        names = {e.id: e.name for e in s.scalars(select(Entity).where(Entity.id.in_(entity_ids)))}
     result = []
     search_texts = []
     for lead in page:
@@ -301,16 +322,20 @@ def list_leads(s, status=None, offset=0, limit=100, topic=None, matched=None, se
         headlines = headlines_of.get(lead.id, [])[:10]
         latest = next((r for r in revisions if r.content_hash == lead.current_revision_hash), revisions[0] if revisions else None)
         search_texts.append(' '.join([latest.event_name if latest else '', latest.summary if latest else '', lead.topic_name or '', *[names.get(i, '') for i in (latest.matched_entity_ids if latest else [])], *[h.headline for h in headlines_of.get(lead.id, [])]]))
-        result.append({**record(lead), 'revision_count': len(revisions), 'latest_revision': record(latest) if latest else None,
+        result.append({**{k:v for k,v in record(lead).items() if k != 'search_text'}, 'revision_count': len(revisions), 'latest_revision': record(latest) if latest else None,
                        'matched_entities': [{'id': i, 'name': names.get(i)} for i in (latest.matched_entity_ids if latest else [])],
                        'headlines': [record(h) for h in headlines]})
     total = s.scalar(select(func.count()).select_from(Lead).where(*filters))
-    if search:
+    if indexed:
+        for item, content in zip(result, search_texts):
+            item['similarity_score'] = scores[item['id']]
+            item['matched_terms'] = sorted(set(tokens(search)) & set(tokens(content)))
+    elif search:
         ranked = [{**result[index], 'similarity_score': score, 'matched_terms': terms} for index, score, terms in rank(search, search_texts)]
         total = len(ranked)
         result = ranked[offset:offset + limit]
     topics = sorted(t for t in s.scalars(select(Lead.topic_name).distinct()) if t)
-    return {'leads': result, 'total': total, 'search': search, 'ranking': 'tfidf-cosine-v1' if search else 'newest', 'offset': offset, 'limit': limit, 'topics': topics}
+    return {'leads': result, 'total': total, 'search': search, 'ranking': 'postgres-fts-v1' if indexed else ('tfidf-cosine-v1' if search else 'newest'), 'offset': offset, 'limit': limit, 'topics': topics}
 
 def main():
     from sqlalchemy.orm import Session

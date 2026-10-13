@@ -41,7 +41,7 @@ Permutable AI events and headlines for aluminium (`ALI_COM`, COMEX) arrive on th
 
 On **Event leads**, enter a query such as `smelter power outage` and click **Search**. Events with shared words appear in similarity order, with a score and matched terms. Status, topic and asset filters still apply. Clear the query and click Search to restore newest-first ordering.
 
-The API supports `GET /api/leads?search=smelter%20power%20outage&limit=20&offset=0`. Ranking uses offline TF-IDF cosine similarity across the latest event title and summary, topic, matched asset names and all linked headlines. It ranks the entire filtered set before pagination. Scores measure lexical overlap, not probabilities or market impact; synonyms and translated equivalents are not inferred. No external AI service or database migration is required. Search currently scans the filtered corpus in memory; a persistent search index is needed before large-scale deployment.
+The API supports `GET /api/leads?search=smelter%20power%20outage&limit=20&offset=0`. Ranking searches the latest event title and summary, topic, matched asset names and linked headlines. PostgreSQL uses indexed full-text relevance; SQLite uses offline TF-IDF cosine similarity. Scores measure lexical overlap, not probabilities or market impact; synonyms and translated equivalents are not inferred. Run migrations before using indexed PostgreSQL search. PostgreSQL deployments use a database-maintained search projection and GIN index; filtering, relevance ranking and pagination run in the database. SQLite retains the local TF-IDF fallback. See [scalable event storage](docs/SCALABLE_EVENT_STORAGE.md) for migration and growth guidance.
 
 ## Starting guide: run locally with Python
 
