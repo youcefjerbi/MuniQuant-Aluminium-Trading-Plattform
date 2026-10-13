@@ -3,7 +3,7 @@ let data, token='', page='overview', leadFilter={status:'new',matched:'',topic:'
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const label=v=>String(v??'').replaceAll('_',' ');
-const badge=(v,color='')=>`<span class="badge ${color}">${esc(v)}</span>`;
+const badge=(v,color='')=>`<span class="badge ${v==='SELL'?'red':v==='BUY'?'green':v==='HOLD'?'':color}">${esc(v)}</span>`;
 const facility=id=>data.entities.find(e=>e.id===id);
 const doc=id=>data.documents.find(d=>d.id===id);
 const source=id=>data.sources.find(s=>s.id===id);

@@ -1,0 +1,35 @@
+/* Neutral surfaces leave green and red for meaningful signals. */
+:root,[data-theme="light"]{color-scheme:light;--bg:#f6f5f2;--surface:#ffffff;--ink:#182335;--muted:#58677c;--line:#dbe2eb;--accent:#087d61;--green:#087d61;--red:#bf3549;--nav:#edf1f7;--soft:#e6ebf2;--accent-soft:#e4f4ee;--red-soft:#fbe8ec;--map-land:#e1e8ef;--shadow:0 5px 18px #23334b08}
+[data-theme="dark"]{color-scheme:dark;--bg:#121924;--surface:#1c2634;--ink:#edf2f8;--muted:#aebbd0;--line:#344359;--accent:#65d6b2;--green:#65d6b2;--red:#ff8998;--nav:#17202d;--soft:#263448;--accent-soft:#203d39;--red-soft:#462b39;--map-land:#263448;--shadow:0 5px 18px #00000020}
+body{background:var(--bg);transition:background-color .22s ease,color .22s ease}
+.sidebar{border-right:1px solid var(--line)}
+nav a.active,nav a:hover,.avatar,.notice,.export-panel{background:var(--accent-soft)}
+.badge,.bar-track,.pipeline span{background:var(--soft)}
+.badge.green,.badge.blue{background:var(--accent-soft);color:var(--accent)}
+.badge.amber,.badge.red{background:var(--red-soft);color:var(--red)}
+.card,.stat{box-shadow:var(--shadow);border-radius:12px}
+.card-head{background:color-mix(in srgb,var(--surface) 92%,var(--soft))}
+.btn{border-radius:8px;transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease}
+.btn.primary{color:var(--surface)}
+[data-theme="dark"] .btn.primary{color:#142b25}
+.btn:hover{filter:none;box-shadow:0 3px 10px #23334b18;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+nav a{transition:background-color .18s ease,color .18s ease,transform .18s ease}
+nav a:hover{transform:translateX(2px)}
+tbody tr{transition:background-color .15s ease}tbody tr:hover{background:var(--soft)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+::selection{background:var(--accent-soft);color:var(--ink)}
+#geography,.leaflet-container{background:var(--bg);color:var(--ink)}
+#map-health,.leaflet-popup-content-wrapper,.leaflet-popup-tip,.leaflet-tooltip,.leaflet-bar a,.leaflet-container .leaflet-control-attribution{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.leaflet-bar a:hover{background:var(--soft)}
+.leaflet-control-attribution a,.leaflet-container a.leaflet-popup-close-button,.dependency-arrow{color:var(--accent)}
+.theme-toggle{min-width:108px}
+.page-arriving{animation:page-arrive .28s ease-out}
+dialog[open]{animation:dialog-arrive .2s ease-out}
+@keyframes page-arrive{from{opacity:.65;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes dialog-arrive{from{opacity:.5;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.btn:hover,nav a:hover{transform:none}}
+@media(max-width:760px){.theme-toggle{min-width:92px}header .breadcrumb{display:none}.header-right{gap:5px}}
+
+.chat-message.user{background:var(--accent-soft)}
+.chat-prompts .btn:hover{background:var(--accent-soft)}
