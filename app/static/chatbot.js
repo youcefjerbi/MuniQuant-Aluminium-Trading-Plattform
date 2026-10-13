@@ -50,14 +50,49 @@
     message('user',question);input.value='';send.disabled=true;status.textContent='Checking stored information…';
     log.setAttribute('aria-busy','true');
     try{
-      const response=await fetch('/api/chat',{method:'POST',signal:controller.signal,
+      const response=await fetch('/api/chat/stream',{method:'POST',signal:controller.signal,
         headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},
         body:JSON.stringify({message:question,scope:document.querySelector('#chat-scope').value,
           history:history.slice(-8),use_ai:aiAvailable&&ai.checked})});
-      const result=await response.json();
-      if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'Unable to answer. Check the question and workspace access.');
+      if(!response.ok){
+        const error=await response.json();
+        throw Error(typeof error.detail==='string'?error.detail:'Unable to answer. Check workspace access.');
+      }
+      const article=message('assistant','');
+      const body=article.querySelector('p');
+      let result={sources:[]}, completed=false, buffer='';
+      const reader=response.body.getReader();
+      const decoder=new TextDecoder();
+      const stop=document.createElement('button');stop.type='button';stop.className='btn';
+      stop.textContent='Stop response';stop.onclick=()=>controller.abort();article.append(stop);
+      try{
+        while(true){
+          const chunk=await reader.read();
+          if(pending!==controller)return;
+          buffer+=decoder.decode(chunk.value||new Uint8Array(),{stream:!chunk.done});
+          let boundary;
+          while((boundary=buffer.indexOf('\n\n'))>=0){
+            const frame=buffer.slice(0,boundary);buffer=buffer.slice(boundary+2);
+            const event=frame.split('\n').find(line=>line.startsWith('event: '))?.slice(7);
+            const payload=JSON.parse(frame.split('\n').filter(line=>line.startsWith('data: ')).map(line=>line.slice(6)).join('\n'));
+            if(event==='meta')result={...result,...payload};
+            if(event==='state')status.textContent=payload.mode==='ai'?
+              payload.warning:'Local stored records · paced display'+(payload.warning?' · '+payload.warning:'');
+            if(event==='delta'){body.textContent+=payload.text;log.scrollTop=log.scrollHeight}
+            if(event==='reset'){body.textContent='';status.textContent=payload.warning}
+            if(event==='done'){result={...result,...payload};body.textContent=result.answer;completed=true}
+          }
+          if(chunk.done)break;
+        }
+        if(!completed)throw Error('Response interrupted. Try again.');
+      }catch(error){
+        if(error.name==='AbortError'){
+          body.textContent='Response stopped. Partial draft discarded.';
+          if(pending===controller)status.textContent='Response stopped';
+        }else body.textContent='Response interrupted. Partial draft discarded.';
+        throw error;
+      }finally{stop.remove();await reader.cancel().catch(()=>{})}
       if(pending!==controller)return;
-      const article=message('assistant',result.answer);
       if(result.sources.length){
         const details=document.createElement('details');details.className='chat-sources';
         const summary=document.createElement('summary');summary.textContent='Inspect '+result.sources.length+' stored sources';
@@ -89,7 +124,7 @@
       }
       history.push({role:'user',content:question},{role:'assistant',content:result.answer.slice(0,1500)});
       history=history.slice(-8);
-      status.textContent=(result.mode==='ai'?'AI summary':'Local records')+' · '+result.retrieved_at+
+      status.textContent=(result.mode==='ai'?'AI summary · citation identifiers checked; review source claims':'Local records')+' · '+result.retrieved_at+
         (result.warning?' · '+result.warning:'');
       log.scrollTop=log.scrollHeight;
     }catch(error){
