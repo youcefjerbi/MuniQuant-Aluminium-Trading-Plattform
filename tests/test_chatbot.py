@@ -113,3 +113,133 @@ def test_configuration_and_chat_ui_are_available(client):
     html=client.get('/').text
     assert '/static/chatbot.js' in html and 'aria-controls="chat-panel"' in html
     assert client.get('/static/chatbot.js').status_code==200
+
+
+def stream_frames(response):
+    return [(frame.split('\n')[0][7:], json.loads(frame.split('\ndata: ')[1]))
+            for frame in response.text.strip().split('\n\n')]
+
+
+def test_local_stream_transport_and_private_auth(client):
+    client.app.state.require_read_auth=True
+    client.app.state.read_token='reader'
+    client.headers.clear()
+    body={'message':'hello'}
+    assert client.post('/api/chat/stream',json=body).status_code==401
+    headers={'Authorization':'Bearer reader'}
+    response=client.post('/api/chat/stream',json=body,headers=headers)
+    assert response.headers['content-type'].startswith('text/event-stream')
+    assert response.headers['cache-control']=='no-store'
+    frames=stream_frames(response)
+    assert frames[0][0]=='meta' and frames[-1][0]=='done'
+    assert len([f for f in frames if f[0]=='delta'])>5
+    assert ''.join(p['text'] for k,p in frames if k=='delta')==frames[-1][1]['answer']
+    assert client.post('/api/chat/stream',json={**body,'use_ai':True},headers=headers).status_code==401
+
+
+def test_ai_stream_incremental_and_bad_citation_reset(client,example,monkeypatch):
+    configure(monkeypatch)
+    async def deltas(*args):
+        yield '[S1] '
+        yield 'Test Smelter.'
+    monkeypatch.setattr(chatbot,'provider_deltas',deltas)
+    body={'message':'Test Smelter','scope':'assets','use_ai':True}
+    frames=stream_frames(client.post('/api/chat/stream',json=body))
+    assert [p['text'] for k,p in frames if k=='delta']==['[S1] ','Test Smelter.']
+    assert 'pending' in next(p['warning'] for k,p in frames if k=='state')
+    assert frames[-1][1]['mode']=='ai'
+    async def invalid(*args):
+        yield '[S999] invented'
+    monkeypatch.setattr(chatbot,'provider_deltas',invalid)
+    frames=stream_frames(client.post('/api/chat/stream',json=body))
+    assert any(k=='reset' for k,p in frames)
+    assert frames[-1][1]['mode']=='local' and '[S999]' not in frames[-1][1]['answer']
+
+
+def test_provider_stream_protocol_and_cancellation(monkeypatch):
+    import asyncio
+    configure(monkeypatch)
+    closed=[]
+    class Response:
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):closed.append('response')
+        def raise_for_status(self):pass
+        async def aiter_lines(self):
+            yield 'event: response.output_text.delta'
+            yield 'data: '+json.dumps({'type':'response.output_text.delta','delta':'[S1] '})
+            yield 'data: '+json.dumps({'type':'response.output_text.delta','delta':'asset'})
+            yield 'data: '+json.dumps({'type':'response.completed','response':{'status':'completed'}})
+    class Client:
+        def __init__(self,**kwargs):assert kwargs['timeout']==20
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):closed.append('client')
+        def stream(self,method,url,**kwargs):
+            assert method=='POST' and url=='https://api.openai.com/v1/responses'
+            assert kwargs['json']['stream'] and kwargs['json']['store'] is False
+            return Response()
+    monkeypatch.setattr(chatbot.httpx,'AsyncClient',Client)
+    async def run():
+        generator=chatbot.provider_deltas(chatbot.ChatIn(message='asset'),'assets',[])
+        assert await anext(generator)=='[S1] '
+        await generator.aclose()
+        assert closed==['response','client']
+        assert [x async for x in chatbot.provider_deltas(chatbot.ChatIn(message='asset'),'assets',[])]==['[S1] ','asset']
+    asyncio.run(run())
+
+
+def test_provider_failure_and_cancel_release_slots(monkeypatch):
+    import asyncio
+    async def failure(*args):
+        yield '[S1] partial'
+        raise ValueError('incomplete')
+    monkeypatch.setattr(chatbot,'provider_deltas',failure)
+    source={'citation':'S1','title':'asset','as_of':None,'excerpt':'stored'}
+    async def run():
+        data=chatbot.ChatIn(message='asset',use_ai=True)
+        frames=[x async for x in chatbot.stream_answer(data,'assets',[source])]
+        assert any('event: reset' in x for x in frames)
+        iterator=chatbot.stream_answer(data,'assets',[source])
+        await anext(iterator) # metadata
+        await anext(iterator) # draft state after acquiring slot
+        await iterator.aclose()
+        assert chatbot.SLOTS.acquire(blocking=False)
+        assert chatbot.SLOTS.acquire(blocking=False)
+        chatbot.SLOTS.release();chatbot.SLOTS.release()
+    asyncio.run(run())
+
+
+def test_stream_ui_uses_safe_text_and_cancellation(client):
+    script=client.get('/static/chatbot.js').text
+    assert 'getReader()' in script and 'TextDecoder' in script
+    assert 'body.textContent+=payload.text' in script and 'innerHTML' not in script
+    assert 'Stop response' in script and 'controller.abort()' in script
+    assert 'Partial draft discarded' in script
+
+
+def test_disconnect_cancels_provider_and_releases_slot(monkeypatch):
+    import asyncio
+    entered=asyncio.Event()
+    stopped=[]
+    async def waiting(*args):
+        try:
+            entered.set()
+            await asyncio.Event().wait()
+            yield 'unreachable'
+        finally:
+            stopped.append(True)
+    monkeypatch.setattr(chatbot,'provider_deltas',waiting)
+    async def run():
+        source={'citation':'S1','title':'asset','as_of':None,'excerpt':'stored'}
+        async def consume():
+            async for _ in chatbot.stream_answer(chatbot.ChatIn(message='asset',use_ai=True),'assets',[source]):
+                pass
+        task=asyncio.create_task(consume())
+        await entered.wait()
+        task.cancel()
+        try:await task
+        except asyncio.CancelledError:pass
+        assert stopped==[True]
+        assert chatbot.SLOTS.acquire(blocking=False)
+        assert chatbot.SLOTS.acquire(blocking=False)
+        chatbot.SLOTS.release();chatbot.SLOTS.release()
+    asyncio.run(run())
