@@ -7,7 +7,7 @@ name = "muniquant-aluminium"
 version = "1.0.0rc1"
 description = "Upstream aluminium industrial evidence platform"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "sqlalchemy>=2.0,<2.1", "alembic>=1.14,<2", "psycopg[binary]>=3.2,<4", "jsonschema>=4.23,<5", "pypdf==6.20.0"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "sqlalchemy>=2.0,<2.1", "alembic>=1.14,<2", "psycopg[binary]>=3.2,<4", "jsonschema>=4.23,<5", "pypdf==6.20.0", "httpx>=0.28,<1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.28,<1"]

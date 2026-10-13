@@ -136,3 +136,11 @@ Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads a
 ## Manual disruption investigations
 
 Open **Investigations** to create analyst-led cases independently of Permutable API events. Collect sourced evidence, hypotheses, contradictions and questions; track conclusions, investigator and review dates with a preserved revision history. Run `alembic upgrade head` after updating. See [the investigation guide](docs/INVESTIGATIONS.md).
+
+## Trader assistant
+
+Open **Trader assistant** from any page to find stored events, asset evidence,
+investigations and paper decisions with source references. Local mode works
+immediately without an AI key. Optional conversational AI summaries require
+server configuration, Workspace access and explicit selection in the chat panel.
+See [the chatbot guide](docs/TRADER_CHATBOT.md) for setup, data handling and limits.
