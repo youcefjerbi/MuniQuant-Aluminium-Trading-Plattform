@@ -1,6 +1,7 @@
 """Read-only trader assistant with bounded retrieval and optional AI synthesis."""
 import json
 import asyncio
+from contextlib import aclosing
 import httpx
 import os
 import re
@@ -295,8 +296,8 @@ async def stream_answer(data, scope, sources):
             try:
                 yield stream_event('state', mode='ai', warning='AI draft · citation checks pending; confirm claims against sources.')
                 chunks = []
-                async with asyncio.timeout(45):
-                    async for delta in provider_deltas(data, scope, sources):
+                async with asyncio.timeout(45), aclosing(provider_deltas(data, scope, sources)) as deltas:
+                    async for delta in deltas:
                         if not isinstance(delta, str):
                             raise ValueError('Invalid text delta')
                         chunks.append(delta)

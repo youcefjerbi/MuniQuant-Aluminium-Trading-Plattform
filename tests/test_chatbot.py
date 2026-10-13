@@ -243,3 +243,24 @@ def test_disconnect_cancels_provider_and_releases_slot(monkeypatch):
         assert chatbot.SLOTS.acquire(blocking=False)
         chatbot.SLOTS.release();chatbot.SLOTS.release()
     asyncio.run(run())
+
+
+def test_stop_while_delta_is_displayed_closes_provider_immediately(monkeypatch):
+    import asyncio
+    stopped=[]
+    async def paused(*args):
+        try:
+            yield '[S1] first'
+            yield ' second'
+        finally:
+            stopped.append(True)
+    monkeypatch.setattr(chatbot,'provider_deltas',paused)
+    async def run():
+        source={'citation':'S1','title':'asset','as_of':None,'excerpt':'stored'}
+        iterator=chatbot.stream_answer(chatbot.ChatIn(message='asset',use_ai=True),'assets',[source])
+        await anext(iterator)
+        await anext(iterator)
+        assert 'event: delta' in await anext(iterator)
+        await iterator.aclose()
+        assert stopped==[True]
+    asyncio.run(run())
