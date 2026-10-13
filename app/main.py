@@ -473,10 +473,11 @@ def create_app(database_url=None, storage=None, write_token=None):
 
     @app.get('/market-chart',include_in_schema=False)
     def market_chart(symbol:str=Query('NYSE:AA',min_length=1,max_length=80,pattern=r'^[A-Z0-9_:./-]+$'),
-                     interval:str=Query('D',pattern=r'^(15|60|D|W)$')):
+                     interval:str=Query('D',pattern=r'^(15|60|D|W)$'),
+                     theme:str=Query('light',pattern=r'^(light|dark)$')):
         from urllib.parse import quote
         config={'autosize':True,'width':'100%','height':'100%','symbol':symbol,'interval':interval,
-                'timezone':'Etc/UTC','theme':'dark','style':'1','locale':'en','allow_symbol_change':False,
+                'timezone':'Etc/UTC','theme':theme,'style':'1','locale':'en','allow_symbol_change':False,
                 'hide_side_toolbar':False,'calendar':False,'support_host':'https://www.tradingview.com',
                 'utm_source':'muniquant','utm_medium':'widget_new','utm_campaign':'advanced-chart'}
         url='https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en#'+quote(json.dumps(config))

@@ -1,7 +1,7 @@
 'use strict';
 const map=L.map('geography',{worldCopyJump:true}).setView([23,10],2);
 let countryLayer=null;
-fetch('/static/vendor/world-countries.geojson').then(r=>r.json()).then(data=>{countryLayer=L.geoJSON(data,{style:{color:'#2b3a30',weight:1,fillColor:'#18231c',fillOpacity:1},onEachFeature:(f,l)=>l.bindTooltip(f.properties.NAME)}).addTo(map);countryLayer.bringToBack()}).catch(()=>document.querySelector('#map-health').textContent='Country boundaries could not load.');
+fetch('/static/vendor/world-countries.geojson').then(r=>r.json()).then(data=>{countryLayer=L.geoJSON(data,{style:()=>({color:getComputedStyle(document.documentElement).getPropertyValue('--line').trim(),weight:1,fillColor:getComputedStyle(document.documentElement).getPropertyValue('--map-land').trim(),fillOpacity:1}),onEachFeature:(f,l)=>l.bindTooltip(f.properties.NAME)}).addTo(map);countryLayer.bringToBack()}).catch(()=>document.querySelector('#map-health').textContent='Country boundaries could not load.');
 map.attributionControl.addAttribution('Countries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>');
 let overlays=L.layerGroup().addTo(map);
 const escapeMap=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,3 +19,5 @@ window.addEventListener('message',event=>{if(event.origin!==location.origin||eve
  document.querySelector('#map-health').textContent=`${graph.nodes.filter(n=>n.location).length} located assets · ${graph.missing_locations} missing locations. Click assets or links for evidence.`;
 });
 parent.postMessage({type:'asset-map-ready'},location.origin);
+
+window.addEventListener('muniquant-theme-change',()=>countryLayer?.setStyle({color:getComputedStyle(document.documentElement).getPropertyValue('--line').trim(),fillColor:getComputedStyle(document.documentElement).getPropertyValue('--map-land').trim()}));
