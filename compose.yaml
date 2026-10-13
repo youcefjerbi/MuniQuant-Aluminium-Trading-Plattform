@@ -32,6 +32,9 @@ services:
       READ_TOKEN: ${READ_TOKEN:-}
       PERMUTABLE_API_KEY: ${PERMUTABLE_API_KEY:-}
       PERMUTABLE_TICKERS: ${PERMUTABLE_TICKERS:-ALI_COM}
+      CHAT_AI_ENABLED: ${CHAT_AI_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CHAT_MODEL: ${CHAT_MODEL:-}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
