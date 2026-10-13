@@ -59,7 +59,7 @@ def create_app(database_url=None, storage=None, write_token=None):
     @app.middleware('http')
     async def request_log(request, call_next):
         start=time.monotonic()
-        if app.state.require_read_auth and request.method=='GET' and request.url.path.startswith('/api/') and request.url.path!='/api/health':
+        if app.state.require_read_auth and (request.method=='GET' or request.url.path=='/api/chat') and request.url.path.startswith('/api/') and request.url.path!='/api/health':
             token=request.headers.get('authorization','').removeprefix('Bearer ')
             allowed=[app.state.write_token,app.state.read_token,*json.loads(os.getenv('WRITE_IDENTITIES_JSON') or '{}')]
             if not token or not any(credential and secrets.compare_digest(token,credential) for credential in allowed):
@@ -156,6 +156,20 @@ def create_app(database_url=None, storage=None, write_token=None):
         response=FileResponse(STATIC/'asset-map-view.html')
         response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
         return response
+
+    from . import chatbot
+
+    @app.get('/api/chat/status')
+    def chat_status():
+        return {'ai_available':chatbot.ai_enabled(), 'default_mode':'local'}
+
+    @app.post('/api/chat')
+    def chat(data:chatbot.ChatIn,request:Request,s:Session=Depends(session)):
+        if data.use_ai:
+            writer(request)  # Paid provider access requires an attributable workspace identity.
+            if not chatbot.ai_enabled():
+                raise HTTPException(503,'AI summaries are not configured; use local mode')
+        return chatbot.answer(s,data)
 
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
