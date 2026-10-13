@@ -1,2 +1,8 @@
-html,body,#geography{height:100%;width:100%;margin:0}#map-health{position:absolute;bottom:25px;left:10px;z-index:1000;background:white;padding:6px;font:12px sans-serif}.leaflet-popup-content{overflow-wrap:anywhere}.dependency-arrow{font:bold 20px sans-serif;color:#2247b4}.map-frame{width:100%;height:600px;border:0}.map-filter{display:flex;gap:12px;flex-wrap:wrap}
-#geography{background:#b9d9e9}
+html,body,#geography{height:100%;width:100%;margin:0}#map-health{position:absolute;bottom:25px;left:10px;z-index:1000;background:#111713;color:#e6eee9;padding:6px;font:12px sans-serif}.leaflet-popup-content{overflow-wrap:anywhere}.dependency-arrow{font:bold 20px sans-serif;color:#4ade80}.map-frame{width:100%;height:600px;border:0}.map-filter{display:flex;gap:12px;flex-wrap:wrap}
+#geography{background:#080b0a}
+
+.leaflet-container{background:#080b0a;color:#e6eee9}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip,.leaflet-tooltip{background:#111713;color:#e6eee9;border-color:#2b3a30}
+.leaflet-bar a,.leaflet-container .leaflet-control-attribution{background:#111713;color:#e6eee9}
+.leaflet-bar a:hover{background:#182d20}
+.leaflet-control-attribution a,.leaflet-container a.leaflet-popup-close-button{color:#4ade80}
