@@ -414,3 +414,4 @@ from . import research_models  # noqa: E402,F401
 from . import asset_map  # noqa: E402,F401
 
 from . import investigations  # noqa: E402,F401
+from . import trading_agent_models  # noqa: E402,F401

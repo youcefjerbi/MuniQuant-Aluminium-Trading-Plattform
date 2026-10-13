@@ -79,10 +79,18 @@ def relations(a, b, linked_pairs):
     return reasons
 
 
+def factual_event_predicate():
+    """Model proposals remain in the paper ledger, outside factual event research."""
+    return (ResearchEvent.payload['is_agent_proposal'].as_boolean().is_not(True) &
+            ResearchEvent.payload['proposal_run_id'].as_string().is_(None))
+
+
 def build_chain(s, data, known):
+    if data.get('is_agent_proposal') or data.get('proposal_run_id'):
+        raise ValueError('Agent proposals cannot anchor factual event chains')
     occurred = stamp(data['occurred_at'])
     candidates = s.scalars(select(ResearchEvent).where(
-        ResearchEvent.instrument == data['instrument'], ResearchEvent.known_at <= known,
+        factual_event_predicate(), ResearchEvent.instrument == data['instrument'], ResearchEvent.known_at <= known,
         ResearchEvent.occurred_at >= iso(occurred - WINDOW), ResearchEvent.occurred_at <= iso(occurred)
     ).order_by(ResearchEvent.occurred_at, ResearchEvent.id).limit(501)).all()
     if len(candidates) > 500:
@@ -209,7 +217,7 @@ def cosine(a, b):
 
 def analogues(s, event, policy):
     candidates = s.execute(select(ResearchEvent, ResearchOutcome).join(ResearchOutcome, ResearchOutcome.event_id == ResearchEvent.id).where(
-        ResearchEvent.instrument == event.instrument, ResearchOutcome.available_at < event.known_at,
+        factual_event_predicate(), ResearchEvent.instrument == event.instrument, ResearchOutcome.available_at < event.known_at,
         ResearchEvent.known_at < iso(stamp(event.known_at) - WINDOW - HORIZON)
     ).limit(10001)).all()
     if len(candidates) > 10000:
@@ -217,6 +225,8 @@ def analogues(s, event, policy):
     ranked = sorted(((cosine(event.features, old.features), old, outcome) for old, outcome in candidates),
                     key=lambda row: (-row[0], row[1].known_at, row[1].id))
     matches, used_events, intervals = [], set(event.chain['event_ids']), []
+    if event.payload.get('is_agent_proposal') or event.payload.get('proposal_run_id'):
+        ranked = []
     for similarity, old, outcome in ranked:
         if old.kind != event.kind or similarity < policy.min_similarity:
             continue
