@@ -13,7 +13,7 @@
     document.querySelectorAll('iframe.map-frame').forEach(frame=>{try{frame.contentWindow.postMessage({type:'muniquant-theme',theme},location.origin)}catch{}});
     window.dispatchEvent(new CustomEvent('muniquant-theme-change',{detail:{theme}}));
   }
-  apply(valid(preference)?preference:(system.matches?'dark':'light'));
+  apply(valid(preference)?preference:'dark');
   system.addEventListener('change',()=>{if(!valid(preference))apply(system.matches?'dark':'light')});
   window.addEventListener('storage',event=>{if(event.key===key){preference=event.newValue;apply(valid(preference)?preference:(system.matches?'dark':'light'))}});
   window.addEventListener('message',event=>{if(event.origin===location.origin&&event.source===parent&&event.data?.type==='muniquant-theme'&&valid(event.data.theme))apply(event.data.theme)});
