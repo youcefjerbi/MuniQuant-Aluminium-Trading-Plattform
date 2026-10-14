@@ -23,7 +23,5 @@
     if(button){button.title='Switch appearance · Alt+T';button.setAttribute('aria-keyshortcuts','Alt+T')}
     document.addEventListener('keydown',event=>{if(event.altKey&&(event.code==='KeyT'||event.key.toLowerCase()==='t')&&!event.ctrlKey&&!event.metaKey&&button){event.preventDefault();button.click()}});
     button?.addEventListener('click',()=>{preference=document.documentElement.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(key,preference)}catch{}apply(preference)});
-    const content=document.getElementById('content');
-    if(content)new MutationObserver(()=>{content.classList.remove('page-arriving');requestAnimationFrame(()=>content.classList.add('page-arriving'))}).observe(content,{childList:true});
   });
 })();
