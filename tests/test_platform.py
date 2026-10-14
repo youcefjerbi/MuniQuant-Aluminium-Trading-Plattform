@@ -93,12 +93,14 @@ def test_export_determinism_and_corruption_detection(client,example):
 def test_upstream_boundary(client, example):
     assert client.post('/api/market', json={}).status_code == 404
     paths = client.get('/openapi.json').json()['paths']
-    assert not any('trading' in path or 'market' in path for path in paths)
+    # The explicit Workspace proposal API is permitted; legacy market/order APIs remain absent.
+    assert not any(('trading' in path or 'market' in path) and not path.startswith('/api/trading-agents/') for path in paths)
     assert 'market' not in client.get('/api/workspace').json()
     assert 'market_observations' not in client.get('/api/export').json()
     assert client.get('/api/export/draft').json()['market_observations'] == []
     html = client.get('/').text
-    assert '#trading' not in html and '#market' not in html
+    assert 'href="#trading"' not in html and 'href="#market"' not in html
+    assert 'href="#trading-agents"' in html
     assert client.get('/static/trading.js').status_code == 404
 
 def test_access_restriction_and_failed_run(client,example):

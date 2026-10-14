@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from math import exp, floor
 from sqlalchemy import select
 from .research_models import ResearchEvent, ResearchOutcome, PaperDecision
+from .research import factual_event_predicate
 
 VERSION = 'event-attention-v1'
 
@@ -15,7 +16,7 @@ def report(s, as_of=None):
     if clock > datetime.now(timezone.utc):
         raise ValueError('as_of cannot be in the future')
     stamp = clock.isoformat()
-    events = s.scalars(select(ResearchEvent).where(ResearchEvent.known_at <= stamp, ResearchEvent.recorded_at <= stamp)
+    events = s.scalars(select(ResearchEvent).where(factual_event_predicate(), ResearchEvent.known_at <= stamp, ResearchEvent.recorded_at <= stamp)
                        .order_by(ResearchEvent.known_at.desc(), ResearchEvent.id).limit(1001)).all()
     if len(events) > 1000:
         raise ValueError('Influence reporting exceeds 1,000 events; partition the research workspace')

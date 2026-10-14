@@ -7,7 +7,7 @@ import secrets
 import hashlib
 import time
 from pathlib import Path
-from fastapi import FastAPI, Request, Depends, HTTPException, Query
+from fastapi import FastAPI, Request, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
@@ -180,6 +180,41 @@ def create_app(database_url=None, storage=None, write_token=None):
         scope, sources = chatbot.retrieve(s,data)
         return StreamingResponse(chatbot.stream_answer(data,scope,sources), media_type='text/event-stream',
             headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
+
+    from . import trading_agents
+    from .trading_agent_models import TradingAgentRun
+
+    @app.get('/api/trading-agents/status')
+    def agent_status():
+        return trading_agents.status()
+
+    @app.get('/api/trading-agents/evidence')
+    def agent_evidence():
+        return trading_agents.evidence_catalog()
+
+    @app.get('/api/trading-agents/runs')
+    def agent_runs(offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),s:Session=Depends(session)):
+        return {'runs':[trading_agents.public_run(r) for r in s.scalars(select(TradingAgentRun)
+            .order_by(TradingAgentRun.created_at.desc(),TradingAgentRun.id).offset(offset).limit(limit))]}
+
+    @app.post('/api/trading-agents/runs',status_code=202)
+    def start_agent_run(data:trading_agents.AgentRequest,background:BackgroundTasks,s:Session=Depends(session),actor=Depends(writer)):
+        run,context=trading_agents.create_run(s,data,actor)
+        if context is not None:
+            background.add_task(trading_agents.run_background,app.state.engine,run.id,context)
+        return trading_agents.public_run(run)
+
+    @app.get('/api/trading-agents/runs/{identifier}')
+    def agent_run(identifier:str,s:Session=Depends(session)):
+        return trading_agents.public_run(get(s,TradingAgentRun,identifier))
+
+    @app.post('/api/trading-agents/runs/{identifier}/cancel')
+    def cancel_agent_run(identifier:str,s:Session=Depends(session),actor=Depends(writer)):
+        return trading_agents.cancel(s,get(s,TradingAgentRun,identifier),actor)
+
+    @app.post('/api/trading-agents/runs/{identifier}/paper')
+    def apply_agent_run(identifier:str,s:Session=Depends(session),actor=Depends(writer)):
+        return trading_agents.apply_paper(s,get(s,TradingAgentRun,identifier),actor)
 
     @app.get('/api/health')
     def health(s:Session=Depends(session)):
