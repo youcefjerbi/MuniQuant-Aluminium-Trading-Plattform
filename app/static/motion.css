@@ -1,0 +1,18 @@
+/* Shared interaction and accessibility rules for the cinematic interface. */
+.workspace-hero{position:relative;overflow:hidden}
+.hero-copy{position:relative;z-index:1}
+.hero-copy .eyebrow{display:flex;align-items:center;gap:10px}
+.hero-copy h1>span{display:block}
+.motion-toggle{border:0;background:transparent;color:var(--muted);font-size:10px;padding:8px 12px;border-radius:20px;cursor:pointer}
+.card,.stat{transition:box-shadow .25s ease,border-color .25s ease}
+.stat{position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .25s ease}
+.stat:hover::before{transform:scaleX(1)}
+.pipeline span{transition:transform .22s ease,border-color .22s ease}
+.pipeline span:hover{transform:translateY(-3px);border-color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.page-arriving{animation:none}
+dialog[open]{animation:dialog-arrive .22s ease-out}
+body[data-motion="off"] *,body[data-motion="off"] *::before,body[data-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+body[data-motion="off"] .btn:hover,body[data-motion="off"] nav a:hover,body[data-motion="off"] .pipeline span:hover{transform:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.pipeline span:hover{transform:none}}

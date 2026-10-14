@@ -16,7 +16,7 @@ dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
 packages = ["app"]
 
 [tool.setuptools.package-data]
-app = ["static/*", "*.schema.json"]
+app = ["static/*", "static/media/*", "*.schema.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
