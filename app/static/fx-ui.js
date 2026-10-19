@@ -189,14 +189,16 @@
     const nav=document.querySelector('.sidebar nav');if(!nav)return;
     const pill=document.createElement('span');
     pill.className='fx-nav-pill';pill.setAttribute('aria-hidden','true');nav.prepend(pill);
+    // classList writes always queue a mutation record, so only touch the pill when its state changes.
     const place=()=>{
       const active=nav.querySelector('a.active');
-      if(!active){pill.classList.remove('ready');return}
+      if(!active){if(pill.classList.contains('ready'))pill.classList.remove('ready');return}
       pill.style.height=`${active.offsetHeight}px`;
       pill.style.transform=`translateY(${active.offsetTop}px)`;
-      pill.classList.add('ready');
+      if(!pill.classList.contains('ready'))pill.classList.add('ready');
     };
-    new MutationObserver(place).observe(nav,{attributes:true,attributeFilter:['class'],subtree:true});
+    new MutationObserver(records=>{if(records.some(record=>record.target!==pill))place()})
+      .observe(nav,{attributes:true,attributeFilter:['class'],subtree:true});
     window.addEventListener('resize',place);place();
   }
 
