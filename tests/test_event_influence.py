@@ -7,7 +7,7 @@ from app.event_influence import report
 
 def test_decision_attention_is_shared_bounded_and_does_not_mutate_ledger(client):
     with Session(client.app.state.engine) as s:
-        populate(s)
+        populate(s, client.app.state.core.cached())
         decision = s.query(PaperDecision).filter_by(action='BUY').one()
         original = dict(decision.details)
         result = report(s)
@@ -26,7 +26,7 @@ def test_decision_attention_is_shared_bounded_and_does_not_mutate_ledger(client)
 
 def test_replay_excludes_backfilled_and_future_records_and_invalid_clock(client):
     with Session(client.app.state.engine) as s:
-        populate(s)
+        populate(s, client.app.state.core.cached())
         past = datetime.now(timezone.utc) - timedelta(days=1)
         assert report(s, past.isoformat())['events'] == [] # historical imports recorded today
     assert client.get('/api/research/influence', params={'as_of':'bad'}).status_code == 422
@@ -36,7 +36,7 @@ def test_replay_excludes_backfilled_and_future_records_and_invalid_clock(client)
 
 
 def test_outcome_component_is_observed_not_directional_prediction(client):
-    with Session(client.app.state.engine) as s: populate(s)
+    with Session(client.app.state.engine) as s: populate(s, client.app.state.core.cached())
     result = client.get('/api/research/influence').json()
     assert result['version'] == 'event-attention-v1'
     historical = [e for e in result['events'] if e['outcome']]

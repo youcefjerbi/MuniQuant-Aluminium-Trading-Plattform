@@ -21,7 +21,7 @@ def event_body(key='incoming', **extra):
 
 def demo(client):
     with Session(client.app.state.engine) as s:
-        return populate(s)
+        return populate(s, client.app.state.core.cached())
 
 
 def test_full_demo_builds_chain_matches_and_automatic_fill(client):
@@ -42,7 +42,7 @@ def test_full_demo_builds_chain_matches_and_automatic_fill(client):
     assert client.get('/api/research/events/' + result['event']['id'] + '/analogues').json()['sample_count'] == 5
     with Session(client.app.state.engine) as s:
         with pytest.raises(ValueError, match='empty'):
-            populate(s)
+            populate(s, client.app.state.core.cached())
 
 
 def test_mutations_require_authorization(client):

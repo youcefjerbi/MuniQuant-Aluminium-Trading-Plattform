@@ -1,9 +1,12 @@
-"""Analyst-led cases independent of API event ingestion and trading."""
+"""Analyst-led cases independent of API event ingestion and trading.
+
+Affected assets and evidence documents are Data Core records: a case stores their Core IDs (a
+document ID is one exact document version) and the Core API confirms they exist."""
 from typing import Literal
 from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from sqlalchemy import Column, String, Integer, JSON, ForeignKey, UniqueConstraint, CheckConstraint, select, update
-from .models import Base, uid, now, Entity, Document
+from .models import Base, uid, now
 
 Status = Literal['investigating', 'confirmed', 'disproven', 'resolved', 'inconclusive']
 
@@ -90,11 +93,11 @@ def review_time(value):
     return date.astimezone(timezone.utc).isoformat()
 
 
-def create(s, data, actor):
+def create(s, data, actor, core):
     payload=data.model_dump()
     payload['asset_ids']=list(dict.fromkeys(payload['asset_ids']))
     for identifier in payload['asset_ids']:
-        if not s.get(Entity, identifier):
+        if not core.entity(identifier):
             raise ValueError('Affected asset is not registered')
     payload['review_at']=review_time(payload['review_at'])
     payload.update(status='investigating',entries=[],tasks=[])
@@ -104,14 +107,14 @@ def create(s, data, actor):
     return case
 
 
-def revise(s, case, data, actor):
+def revise(s, case, data, actor, core):
     import copy
     snapshot=copy.deepcopy(case.snapshot)
     if data.entry:
         if len(snapshot['entries']) >= 1000:
             raise ValueError('A case supports at most 1,000 entries')
         entry=data.entry.model_dump()
-        if entry['document_id'] and not s.get(Document,entry['document_id']):
+        if entry['document_id'] and not core.document(entry['document_id']):
             raise ValueError('Evidence document is not registered')
         if entry['hypothesis_id'] and not any(e['id']==entry['hypothesis_id'] and e['kind']=='hypothesis' for e in snapshot['entries']):
             raise ValueError('Hypothesis must belong to this investigation')
@@ -163,7 +166,7 @@ class InvestigationEntry(Base):
     case_id=Column(String,ForeignKey('investigation.id'),nullable=False,index=True)
     kind=Column(String(32),nullable=False,index=True)
     text=Column(String,nullable=False)
-    document_id=Column(String,ForeignKey('documents.id'))
+    document_id=Column(String)  # Core reference: one exact document version
     hypothesis_id=Column(String,ForeignKey('investigation_entry.id'))
     stance=Column(String(16),nullable=False)
     source_url=Column(String)

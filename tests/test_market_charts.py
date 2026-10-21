@@ -43,7 +43,7 @@ def test_empty_account_does_not_invent_performance(client):
 
 
 def test_paper_profit_includes_fees_and_slippage_and_updates_at_stored_quotes(client):
-    with Session(client.app.state.engine) as s: populate(s)
+    with Session(client.app.state.engine) as s: populate(s, client.app.state.core.cached())
     before=client.get('/api/research/performance').json()
     assert before['summary']['trade_count']==1
     assert before['trades'][0]['action']=='BUY'
@@ -62,7 +62,7 @@ def test_paper_profit_includes_fees_and_slippage_and_updates_at_stored_quotes(cl
 
 
 def test_delayed_old_and_historical_quotes_do_not_replace_latest_mark(client):
-    with Session(client.app.state.engine) as s: populate(s)
+    with Session(client.app.state.engine) as s: populate(s, client.app.state.core.cached())
     quote(client,'current','110')
     quote(client,'delayed-old','999',observed=datetime.now(timezone.utc)-timedelta(hours=1))
     quote(client,'historical-only','888',observed=datetime.now(timezone.utc)-timedelta(minutes=1),historical=True)
@@ -72,7 +72,7 @@ def test_delayed_old_and_historical_quotes_do_not_replace_latest_mark(client):
 
 
 def test_chart_symbol_is_context_only_and_does_not_change_paper_settings(client):
-    with Session(client.app.state.engine) as s: populate(s)
+    with Session(client.app.state.engine) as s: populate(s, client.app.state.core.cached())
     before=client.get('/api/research').json()['account']
     client.get('/market-chart',params={'symbol':'NASDAQ:AAPL'},follow_redirects=False)
     assert client.get('/api/research').json()['account']==before
