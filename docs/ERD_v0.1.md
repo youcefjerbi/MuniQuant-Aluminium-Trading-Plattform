@@ -1,5 +1,7 @@
 # Implemented domain relationships
 
+> Since DC1 (October 2026) these tables live in the Data Core; its repository holds the current diagram (`docs/DATA_DIAGRAM.md`). The Workspace's own tables are drawn in [ARCHITECTURE.md](ARCHITECTURE.md#data-diagram).
+
 Gate 1 approved 2026-10-10; additive migrations preserve legacy external entity IDs. app/models.py and the migration chain are the precise schema source.
 
 ```mermaid
