@@ -1,4 +1,7 @@
-"""Explicit permitted URLs only: public-IP-pinned HTTPS, bounded snapshots and attempt logs."""
+"""Capture of licensed lead feeds into the Workspace's lead store.
+
+Explicit permitted URLs only: public-IP-pinned HTTPS, bounded snapshots and attempt logs.
+"""
 import hashlib
 import http.client
 import ipaddress
@@ -11,7 +14,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit, urljoin
 from sqlalchemy import select, func
-from .models import Source, SourceAccess, SourceSnapshot, DocumentVersion, SourceDocumentRelation, Document, Run, RetrievalAttempt
+from .models import LeadSource as Source, LeadSourceAccess as SourceAccess, LeadSnapshot as SourceSnapshot, LeadDocumentVersion as DocumentVersion, LeadSourceDocument as SourceDocumentRelation, LeadDocument as Document, LeadRun as Run, LeadRetrievalAttempt as RetrievalAttempt
 
 MAX_BYTES = 10_000_000
 MEDIA = {'text/plain', 'text/html', 'text/csv', 'application/pdf', 'application/json'}

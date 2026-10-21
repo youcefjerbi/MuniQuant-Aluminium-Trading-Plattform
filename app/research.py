@@ -1,6 +1,8 @@
 """Experimental, deterministic event chains and a cash-only paper broker.
 
-No broker SDK, live orders, external LLM, or assertion of predictive validity.
+No broker SDK, live orders, external LLM, or assertion of predictive validity. Plants and the
+ownership and operator links between them are read from the Data Core; an event stores Core plant
+IDs, and a chain stores the Core links (fact and document IDs) it used.
 """
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -9,7 +11,7 @@ from math import sqrt
 import re
 import unicodedata
 from sqlalchemy import select, update
-from .models import Audit, Entity, Lead, LeadRevision, Relationship, uid, now
+from .models import Audit, Lead, LeadRevision, uid, now
 from .research_models import ResearchEvent, ResearchQuote, ResearchOutcome, PaperPolicy, PaperAccount, PaperDecision
 from .research_schemas import PolicyIn, EventIn, KINDS
 from .services import record
@@ -79,7 +81,7 @@ def relations(a, b, linked_pairs):
     return reasons
 
 
-def build_chain(s, data, known):
+def build_chain(s, data, known, core):
     occurred = stamp(data['occurred_at'])
     candidates = s.scalars(select(ResearchEvent).where(
         ResearchEvent.instrument == data['instrument'], ResearchEvent.known_at <= known,
@@ -88,11 +90,14 @@ def build_chain(s, data, known):
     if len(candidates) > 500:
         raise ValueError('More than 500 events in the chain window; partition the instrument stream')
     # Ownership/operator facts have no availability history suitable for replay;
-    # only use relationships actually recorded by the anchor's availability time.
-    available_relationships = set(s.scalars(select(Audit.record_id).where(Audit.created_at <= known)))
-    linked_pairs = {frozenset((r.company_id, r.facility_id)) for r in s.scalars(select(Relationship))
-                    if r.id in available_relationships and r.valid_from <= data['occurred_at'][:10]
-                    and (not r.valid_to or r.valid_to >= data['occurred_at'][:10])}
+    # only use relationships the Core had recorded by the anchor's availability time.
+    day = data['occurred_at'][:10]
+    links = {}
+    for r in core.relationships():
+        recorded = core.first_audited(r['id'])
+        if recorded is not None and recorded <= known and r['valid_from'] <= day and (not r['valid_to'] or r['valid_to'] >= day):
+            links.setdefault(frozenset((r['company_id'], r['facility_id'])), []).append(r)
+    linked_pairs = set(links)
     selected = [{'id': data['id'], **data}]
     remaining = list(candidates)
     edges = []
@@ -108,7 +113,13 @@ def build_chain(s, data, known):
                 raise ValueError('Chain exceeds 50 related events; narrow the stream')
             for node, why in connections:
                 first, second = sorted((payload, node), key=lambda e: (e['occurred_at'], e['id']))
-                edges.append({'from': first['id'], 'to': second['id'], 'reasons': why, 'causal': False})
+                edge = {'from': first['id'], 'to': second['id'], 'reasons': why, 'causal': False}
+                if 'registered_relationship' in why:
+                    # Versioned Core references: the link facts and their document versions.
+                    used = {frozenset((x, y)) for x in payload['entity_ids'] for y in node['entity_ids']} & linked_pairs
+                    edge['core_relationships'] = sorted(({'relationship_id': r['id'], 'company_id': r['company_id'], 'facility_id': r['facility_id'], 'document_id': r['document_id']}
+                                                         for pair in used for r in links[pair]), key=lambda item: item['relationship_id'])
+                edges.append(edge)
             selected.append(payload); remaining.remove(candidate); added = True
         if not added:
             break
@@ -129,7 +140,7 @@ def build_chain(s, data, known):
             'sequence': [e['kind'] for e in selected], 'edges': edges}, dict(features)
 
 
-def ingest_event(s, data, actor):
+def ingest_event(s, data, actor, core):
     payload = data.model_dump(mode='json')
     payload['occurred_at'] = iso(data.occurred_at)
     payload['known_at'] = iso(data.known_at) if data.known_at else now()
@@ -144,11 +155,12 @@ def ingest_event(s, data, actor):
         decision = s.scalar(select(PaperDecision).where(PaperDecision.event_id == existing.id))
         return {'event': record(existing), 'decision': record(decision) if decision else None, 'duplicate': True}
     for identifier in data.entity_ids:
-        required(s, Entity, identifier)
+        if not core.entity(identifier):
+            raise LookupError('Record not found')
     if data.lead_id:
         required(s, Lead, data.lead_id)
     identifier = uid()
-    chain, features = build_chain(s, {**payload, 'id': identifier}, payload['known_at'])
+    chain, features = build_chain(s, {**payload, 'id': identifier}, payload['known_at'], core)
     event = ResearchEvent(id=identifier, external_key=data.external_key, instrument=data.instrument, kind=data.kind,
                           occurred_at=payload['occurred_at'], known_at=payload['known_at'], historical=int(data.historical),
                           payload=payload, chain=chain, features=features)
@@ -335,7 +347,7 @@ def dashboard(s):
             'event_kinds': list(KINDS)}
 
 
-def import_leads(s, actor, document_ids=None, live=False):
+def import_leads(s, actor, core, document_ids=None, live=False):
     """Bridge factual vendor revisions, using revision availability, never vendor analytics."""
     imported = []
     query = select(Lead).join(LeadRevision, (LeadRevision.lead_id == Lead.id) & (LeadRevision.content_hash == Lead.current_revision_hash))
@@ -361,7 +373,7 @@ def import_leads(s, actor, document_ids=None, live=False):
         result = ingest_event(s, EventIn(external_key='lead:' + lead.id + ':' + revision.content_hash,
             kind=kind, occurred_at=when, known_at=None if live else max(iso(when), iso(revision.recorded_at)), historical=not live,
             title=title, summary=revision.summary, source_reference='document:' + revision.document_id,
-            entity_ids=revision.matched_entity_ids, tags=[lead.ticker.casefold(), (lead.topic_name or 'unclassified')[:100]], lead_id=lead.id), actor)
+            entity_ids=revision.matched_entity_ids, tags=[lead.ticker.casefold(), (lead.topic_name or 'unclassified')[:100]], lead_id=lead.id), actor, core)
         if not result['duplicate']:
             imported.append(result['event']['id'])
     return {'imported': imported, 'mode': 'incoming' if live else 'historical',

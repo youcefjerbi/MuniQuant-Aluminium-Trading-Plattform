@@ -1,16 +1,19 @@
+"""Asset map: Workspace locations and dependencies for Data Core plants.
+
+Locations and links store Core plant and document IDs; plant details come from the Core API."""
 from datetime import date
 from typing import Literal
 from pydantic import BaseModel,ConfigDict,Field,model_validator
-from sqlalchemy import Column,String,Float,Integer,ForeignKey,CheckConstraint,select
-from .models import Base,uid,now,Entity,Document
+from sqlalchemy import Column,String,Float,Integer,CheckConstraint,select
+from .models import Base,uid,now
 
 class AssetLocation(Base):
     __tablename__='asset_location'
     id=Column(String,primary_key=True,default=uid)
-    entity_id=Column(String,ForeignKey('entities.id'),nullable=False,index=True)
+    entity_id=Column(String,nullable=False,index=True)  # Core reference
     latitude=Column(Float,nullable=False)
     longitude=Column(Float,nullable=False)
-    document_id=Column(String,ForeignKey('documents.id'),nullable=False)
+    document_id=Column(String,nullable=False)  # Core reference
     precision=Column(String(32),nullable=False)
     synthetic=Column(Integer,nullable=False)
     actor=Column(String,nullable=False)
@@ -19,11 +22,11 @@ class AssetLocation(Base):
 class AssetDependency(Base):
     __tablename__='asset_dependency'
     id=Column(String,primary_key=True,default=uid)
-    from_entity_id=Column(String,ForeignKey('entities.id'),nullable=False,index=True)
-    to_entity_id=Column(String,ForeignKey('entities.id'),nullable=False,index=True)
+    from_entity_id=Column(String,nullable=False,index=True)  # Core reference
+    to_entity_id=Column(String,nullable=False,index=True)  # Core reference
     product=Column(String(32),nullable=False,index=True)
     kind=Column(String(32),nullable=False)
-    document_id=Column(String,ForeignKey('documents.id'),nullable=False)
+    document_id=Column(String,nullable=False)  # Core reference
     valid_from=Column(String,nullable=False)
     valid_to=Column(String)
     status=Column(String(16),nullable=False)
@@ -58,15 +61,15 @@ class DependencyIn(BaseModel):
         if self.valid_to and self.valid_to<self.valid_from:raise ValueError('Invalid validity interval')
         return self
 
-def validate_references(s,data):
+def validate_references(core,data):
     for key in ('entity_id','from_entity_id','to_entity_id'):
-        if key in data and not s.get(Entity,data[key]):raise ValueError('Asset is not registered')
-    if not s.get(Document,data['document_id']):raise ValueError('Evidence document is not registered')
+        if key in data and not core.entity(data[key]):raise ValueError('Asset is not registered')
+    if not core.document(data['document_id']):raise ValueError('Evidence document is not registered')
 
-def graph(s,product=None,as_of=None):
+def graph(s,core,product=None,as_of=None):
     from .services import record
     day=(as_of or date.today()).isoformat()
-    entities={e.id:record(e) for e in s.scalars(select(Entity))}
+    entities={e['id']:e for e in core.entities()}
     rows=s.scalars(select(AssetLocation).order_by(AssetLocation.recorded_at,AssetLocation.id).limit(10001)).all()
     if len(rows)>10000:raise ValueError('Map exceeds 10,000 locations')
     locations={r.entity_id:record(r) for r in rows}

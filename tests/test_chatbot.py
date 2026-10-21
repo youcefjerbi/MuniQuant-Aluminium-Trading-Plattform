@@ -16,12 +16,11 @@ def test_empty_and_validation(client):
         assert client.post('/api/chat',json=body).status_code==422
 
 
-def test_asset_evidence_has_exact_reported_values_and_source(client,example):
+def test_asset_evidence_has_exact_reported_values_and_source(client,core,example):
     entity,source,doc,_=example
-    response=client.post('/api/observations',json={'entity_id':entity['id'],'document_id':doc['id'],
+    core.post('observations',{'entity_id':entity['id'],'document_id':doc['id'],
         'reported_value':'420.123456','reported_unit':'kt/year','valid_from':'2025-01-01',
         'evidence_reference':'Table 1'})
-    assert response.status_code==201
     result=client.post('/api/chat',json={'message':'Test Smelter capacity','scope':'assets'}).json()
     assert '420.123456 kt/year' in result['answer'] and 'Table 1' in result['answer']
     assert any(x['document_id']==doc['id'] for x in result['sources'])
@@ -39,7 +38,7 @@ def test_vendor_leads_are_unverified_and_followup_uses_question(client,lead_sour
 
 
 def test_paper_decisions_do_not_mutate_any_table(client):
-    with Session(client.app.state.engine) as s: populate(s)
+    with Session(client.app.state.engine) as s: populate(s, client.app.state.core.cached())
     def counts():
         with Session(client.app.state.engine) as s:
             return {t.name:s.scalar(select(func.count()).select_from(t)) for t in Base.metadata.sorted_tables}

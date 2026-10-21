@@ -1,6 +1,6 @@
-def test_locations_dependencies_filters_and_provenance(client,example):
+def test_locations_dependencies_filters_and_provenance(client,core,example):
     e,_,d,_=example
-    b=client.post('/api/entities',json={'name':'Test Refinery','country':'AU','facility_type':'refinery'}).json()
+    b=core.post('entities',{'name':'Test Refinery','country':'AU','facility_type':'refinery'})
     for entity,lat,lon in [(e,60,8),(b,-25,135)]:
         r=client.post('/api/asset-map/locations',json={'entity_id':entity['id'],'latitude':lat,'longitude':lon,'document_id':d['id']})
         assert r.status_code==201,r.text

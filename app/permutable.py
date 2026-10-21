@@ -6,9 +6,14 @@ direction/impact scores, signals, forecasts) are never parsed into tables or exp
 they survive only inside the exact response bytes preserved as snapshots. A lead points a
 curator to an industrial change; any observation must cite a primary source.
 
+Responses, saved copies and leads live in the Workspace's lead store. Plant names to match come
+from the Data Core through its API; a confirmed lead keeps Core references to the primary-source
+document and the fact it supports.
+
     python -m app.permutable setup
     python -m app.permutable capture --feed events --mode historical --since 2026-07-01
     python -m app.permutable poll            # live events + headlines; schedule every 15 min
+    python -m app.permutable refresh-search  # pick up plant renames in the Core; schedule hourly
 """
 import argparse
 import json
@@ -21,11 +26,12 @@ from uuid import uuid5, NAMESPACE_URL
 from sqlalchemy import select, update, func
 from sqlalchemy.exc import IntegrityError
 from . import acquisition
+from .core_client import CoreUnavailable
 from .domain import canonical
-from .models import Source, SourceAccess, Document, Lead, LeadRevision, LeadHeadline, Run, Audit, Entity, EntitySupersession, Observation, now
+from .models import LeadSource as Source, LeadSourceAccess as SourceAccess, LeadDocument as Document, Lead, LeadRevision, LeadHeadline, LeadRun as Run, Audit, now
 from .pipeline import snapshot_bytes, logical_hash
 from .schemas import RetrievalIn, PermutableSourceIn, PermutableCaptureIn, LeadDecisionIn
-from .services import record, require_citable
+from .services import record
 
 HOST = 'copilot-api.permutable.ai'
 BASE = 'https://' + HOST + '/v1'
@@ -78,16 +84,32 @@ def register_source(s, actor, data=None):
     policy = latest_policy(s)
     if policy and policy.status != 'permitted':
         # Re-running setup must never silently overturn a reviewer's restriction or pending review.
-        s.rollback(); raise ValueError('Permutable access is ' + policy.status + '; record a new access decision under Sources & evidence first')
+        s.rollback(); raise ValueError('Permutable access is ' + policy.status + '; record a new access decision for the lead source first')
     if not policy or policy.credential_ref != data.credential_ref:
         previous = policy
         policy = SourceAccess(source_id=SOURCE_ID, status='permitted', allowed_hosts=previous.allowed_hosts if previous else [HOST],
                               basis=previous.basis if previous else data.basis, retention=previous.retention if previous else data.retention,
-                              reviewer=actor, credential_ref=data.credential_ref, auth_header='x-api-key', usage_scope=previous.usage_scope if previous else 'leads_only')
+                              reviewer=actor, credential_ref=data.credential_ref, auth_header='x-api-key')
         s.add(policy); source.access_status = 'permitted'; s.flush()
-        s.add(Audit(actor=actor, action='access_decision', record_id=policy.id, detail={'type': 'source_access', 'usage_scope': policy.usage_scope, 'credential_ref': data.credential_ref}))
+        s.add(Audit(actor=actor, action='access_decision', record_id=policy.id, detail={'type': 'source_access', 'usage_scope': 'leads_only', 'credential_ref': data.credential_ref}))
     s.commit()
     return source, policy
+
+def record_access(s, actor, data):
+    """An audited access decision for the lead source: restrict, re-review or permit it again."""
+    source = s.get(Source, SOURCE_ID)
+    if not source: raise LookupError('Register the Permutable source first')
+    values = data.model_dump()
+    previous = latest_policy(s)
+    # A re-review that omits the credential fields keeps them; dropping them needs an explicit value.
+    if previous and 'credential_ref' not in data.model_fields_set and 'auth_header' not in data.model_fields_set:
+        values['credential_ref'], values['auth_header'] = previous.credential_ref, previous.auth_header
+    acquisition.check_credential_binding(values['credential_ref'], values['allowed_hosts'])
+    policy = SourceAccess(source_id=SOURCE_ID, **values, reviewer=actor)
+    s.add(policy); source.access_status = data.status; s.flush()
+    s.add(Audit(actor=actor, action='access_decision', record_id=policy.id, detail={'type': 'source_access', 'usage_scope': 'leads_only'}))
+    s.commit()
+    return policy
 
 def _text(value, limit):
     if not isinstance(value, str): return None
@@ -135,20 +157,20 @@ def parse_feed(raw, feed):
                          'published_at': _stamp(item.get('publication_time')), 'language': _text(item.get('language'), 16)})
     return rows
 
-def entity_index(s):
-    """Canonical names and aliases of current entities; superseded identities map to survivors."""
-    links = {link.old_entity_id: link.new_entity_id for link in s.scalars(select(EntitySupersession))}
+def entity_index(core):
+    """Canonical names and aliases of current Core entities; superseded identities map to survivors."""
+    links = core.supersessions()
     def current(identifier):
         seen = set()
         while identifier in links and identifier not in seen:
             seen.add(identifier); identifier = links[identifier]
         return identifier
     index = {}
-    for entity in s.scalars(select(Entity)):
-        for name in [entity.name, *entity.aliases]:
+    for entity in core.entities():
+        for name in [entity['name'], *entity['aliases']]:
             key = canonical(name)
             # Very short names (e.g. "QA") match too much free text to be a useful pointer.
-            if len(key) >= 4: index.setdefault(key, set()).add(current(entity.id))
+            if len(key) >= 4: index.setdefault(key, set()).add(current(entity['id']))
     return index
 
 def match_entities(index, texts):
@@ -165,16 +187,18 @@ def _lead(s, event_id, ticker, seen_at):
     s.add(lead); s.flush()
     return lead, True
 
-def derive(s, storage, document, ticker):
+def derive(s, storage, document, ticker, core):
     """Turn one preserved response into leads, distinct event revisions and headlines."""
     if document.source_id != SOURCE_ID: raise ValueError('Not a Permutable lead document')
     feed = feed_of(document)
     if feed in REFERENCE: return {'leads_created': 0, 'revisions_added': 0, 'headlines_added': 0}
     rows = parse_feed(snapshot_bytes(storage, document), feed)
     counts = {'leads_created': 0, 'revisions_added': 0, 'headlines_added': 0}
-    index = entity_index(s) if feed == 'events' else None
+    index = entity_index(core) if feed == 'events' else None
+    touched = set()
     for row in rows:
         lead, created = _lead(s, row['event_id'], ticker, document.retrieved_at)
+        touched.add(lead.id)
         counts['leads_created'] += created
         facts = {key: row[key] for key in (EVENT_FACTS if feed == 'events' else HEADLINE_FACTS)}
         digest = logical_hash(facts)
@@ -198,13 +222,14 @@ def derive(s, storage, document, ticker):
             s.add(LeadHeadline(**common, **facts))
             counts['headlines_added'] += 1
         s.flush()
+    refresh_search(s, core, touched)
     if any(counts.values()):
         s.add(Run(status='success', pipeline_version='1.0.0', manifest={'adapter': 'permutable-leads', 'parser_version': PARSER_VERSION, 'document_id': document.id,
                                                                           'content_hash': document.content_hash, 'feed': feed, 'ticker': ticker, **counts}))
     s.flush()
     return counts
 
-def capture(s, storage, actor, data, fetch=None, pause=0.1):
+def capture(s, storage, actor, data, core, fetch=None, pause=0.1):
     """Fetch one feed (paging historical windows), preserve every page and derive leads."""
     if not s.get(Source, SOURCE_ID): raise ValueError('Register the Permutable source first')
     fetch = fetch or acquisition.fetch_once
@@ -222,15 +247,15 @@ def capture(s, storage, actor, data, fetch=None, pause=0.1):
         document_id, content_hash = doc.id, doc.content_hash
         for attempt in (1, 2):
             try:
-                counts = derive(s, storage, doc, data.ticker); break
-            except (ValueError, IntegrityError) as exc:
+                counts = derive(s, storage, doc, data.ticker, core); break
+            except (ValueError, IntegrityError, CoreUnavailable) as exc:
                 # The preserved response stays registered; a failure is logged without partial leads.
                 s.rollback()
                 if isinstance(exc, IntegrityError) and attempt == 1:
                     doc = s.get(Document, document_id); continue  # a concurrent capture created the same lead first
                 error = 'Concurrent capture conflict; retry' if isinstance(exc, IntegrityError) else str(exc)[:500]
                 s.add(Run(status='failed', pipeline_version='1.0.0', manifest={'adapter': 'permutable-leads', 'parser_version': PARSER_VERSION, 'document_id': document_id, 'content_hash': content_hash, 'error': error}))
-                s.commit(); raise ValueError(error) from None
+                s.commit(); raise (CoreUnavailable if isinstance(exc, CoreUnavailable) else ValueError)(error) from None
         for key, value in counts.items(): summary[key] += value
         s.commit()
         if data.mode == 'live': break
@@ -258,18 +283,19 @@ def replay_document(s, storage, document_id):
         if logical_hash(facts) != digest or digest not in parsed: raise ValueError('Stored lead facts differ from the preserved response')
     return {'document_id': doc.id, 'content_hash': doc.content_hash, 'parser_version': PARSER_VERSION, 'feed': feed, 'records': len(rows), 'verified': len(stored), 'equivalent': True}
 
-def decide(s, lead_id, data, actor):
-    """Audited triage: new -> follow_up -> confirmed (with primary evidence) or dismissed."""
+def decide(s, lead_id, data, actor, core):
+    """Audited triage: new -> follow_up -> confirmed (with primary evidence) or dismissed.
+
+    The primary-source document and its fact are Core records; lead feeds are never Core sources."""
     lead = s.get(Lead, lead_id)
     if not lead: raise LookupError('Lead not found')
     if data.status not in TRANSITIONS.get(lead.status, set()): raise LeadConflict(f'Lead is {lead.status}; {data.status} is not allowed')
     if data.status == 'confirmed':
-        doc = s.get(Document, data.primary_document_id)
+        doc = core.document(data.primary_document_id)
         if not doc: raise ValueError('Unknown primary-source document')
-        require_citable(s, doc)
         if data.observation_id:
-            obs = s.get(Observation, data.observation_id)
-            if not obs or obs.document_id != doc.id: raise ValueError('Observation must cite the confirming primary-source document')
+            obs = core.observation(data.observation_id)
+            if not obs or obs['document_id'] != doc['id']: raise ValueError('Observation must cite the confirming primary-source document')
     changed = s.execute(update(Lead).where(Lead.id == lead_id, Lead.status == lead.status).values(
         status=data.status, reviewer=actor, reason=data.reason, decided_at=now(), primary_document_id=data.primary_document_id, observation_id=data.observation_id))
     if changed.rowcount != 1: raise LeadConflict('Lead was decided concurrently; refresh and retry')
@@ -277,7 +303,42 @@ def decide(s, lead_id, data, actor):
     s.commit(); s.refresh(lead)
     return lead
 
-def list_leads(s, status=None, offset=0, limit=100, topic=None, matched=None, search=None):
+def concat_ws(*parts):
+    """PostgreSQL concat_ws(' ', ...): NULL parts are skipped, empty strings are kept."""
+    return ' '.join(part for part in parts if part is not None)
+
+def refresh_search(s, core, lead_ids=None):
+    """Recompute the search projection of the given leads (all when None) from their current revision,
+    their headlines and the current Core names of matched plants. Returns the number of leads changed.
+
+    Before the split, PostgreSQL triggers kept this text, including a trigger on the plant table that
+    now lives in the Core; the Core cannot call the Workspace, so a rename reaches the projection on the
+    next refresh-search run."""
+    if lead_ids is not None and not lead_ids: return 0
+    query = select(Lead)
+    if lead_ids is not None: query = query.where(Lead.id.in_(sorted(lead_ids)))
+    leads = s.scalars(query.order_by(Lead.id)).all()
+    if not leads: return 0
+    names = {entity['id']: entity['name'] for entity in core.entities()}
+    ids = [lead.id for lead in leads]
+    revisions_of, headlines_of = {}, {}
+    for revision in s.scalars(select(LeadRevision).where(LeadRevision.lead_id.in_(ids)).order_by(LeadRevision.recorded_at.desc(), LeadRevision.id)):
+        revisions_of.setdefault(revision.lead_id, []).append(revision)
+    for headline in s.scalars(select(LeadHeadline).where(LeadHeadline.lead_id.in_(ids)).order_by(LeadHeadline.id)):
+        headlines_of.setdefault(headline.lead_id, []).append(headline.headline)
+    changed = 0
+    for lead in leads:
+        revisions = revisions_of.get(lead.id, [])
+        revision = next((r for r in revisions if r.content_hash == lead.current_revision_hash), revisions[0] if revisions else None)
+        matched = [names[i] for i in sorted(revision.matched_entity_ids) if i in names] if revision else []
+        text = concat_ws(lead.topic_name, concat_ws(revision.event_name, revision.summary, ' '.join(matched) or None) if revision else None,
+                         ' '.join(headlines_of[lead.id]) if lead.id in headlines_of else None)
+        if lead.search_text != text:
+            lead.search_text = text; changed += 1
+    s.flush()
+    return changed
+
+def list_leads(s, core, status=None, offset=0, limit=100, topic=None, matched=None, search=None):
     from .event_search import rank, tokens
     from sqlalchemy import text
     search = search.strip() if search else ""
@@ -314,7 +375,7 @@ def list_leads(s, status=None, offset=0, limit=100, topic=None, matched=None, se
         headlines_of.setdefault(item.lead_id, []).append(item)
     entity_ids = {i for revisions in revisions_of.values() for r in revisions for i in r.matched_entity_ids}
     if entity_ids:
-        names = {e.id: e.name for e in s.scalars(select(Entity).where(Entity.id.in_(entity_ids)))}
+        names = {e['id']: e['name'] for e in core.entities() if e['id'] in entity_ids}
     result = []
     search_texts = []
     for lead in page:
@@ -353,13 +414,19 @@ def main():
     one.add_argument('--max-pages', type=int, default=10)
     poll = commands.add_parser('poll', help='capture live events and headlines for each ticker')
     poll.add_argument('--tickers', default=os.getenv('PERMUTABLE_TICKERS', 'ALI_COM'))
+    commands.add_parser('refresh-search', help='recompute lead search text with the current Core plant names')
     args = parser.parse_args()
     actor = os.getenv('WRITE_ACTOR', 'permutable-operator')
     storage = os.getenv('SNAPSHOT_DIR', 'data/snapshots')
+    from .core_client import CoreClient
+    core = CoreClient().cached()
     with Session(make_engine(DATABASE_URL)) as s:
+        if args.command == 'refresh-search':
+            changed = refresh_search(s, core); s.commit()
+            print(json.dumps({'leads_changed': changed}, indent=2)); return
         if args.command == 'setup':
             source, policy = register_source(s, actor, PermutableSourceIn(credential_ref=args.credential_ref))
-            print(json.dumps({'source_id': source.id, 'access_decision_id': policy.id, 'usage_scope': policy.usage_scope, 'credential_ref': policy.credential_ref}, indent=2))
+            print(json.dumps({'source_id': source.id, 'access_decision_id': policy.id, 'usage_scope': 'leads_only', 'credential_ref': policy.credential_ref}, indent=2))
             jobs = [PermutableCaptureIn(feed=feed, ticker=ticker.strip()) for ticker in args.tickers.split(',') if ticker.strip() for feed in sorted(REFERENCE)]
         elif args.command == 'capture':
             jobs = [PermutableCaptureIn(feed=args.feed, mode=args.mode, ticker=args.ticker, start_date=args.since, end_date=args.until, max_pages=args.max_pages)]
@@ -367,9 +434,9 @@ def main():
             jobs = [PermutableCaptureIn(feed=feed, ticker=ticker.strip()) for ticker in args.tickers.split(',') if ticker.strip() for feed in ('events', 'event_headlines')]
         results, failed = [], False
         for job in jobs:
-            try: results.append(capture(s, storage, actor, job))
+            try: results.append(capture(s, storage, actor, job, core))
             # A concurrent poll can win the race for a new lead; the next scheduled run picks up the rest.
-            except (ValueError, IntegrityError) as exc:
+            except (ValueError, IntegrityError, CoreUnavailable) as exc:
                 s.rollback(); failed = True
                 results.append({'feed': job.feed, 'ticker': job.ticker, 'error': str(exc)})
         print(json.dumps(results, indent=2))
