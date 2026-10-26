@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/muniquant.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/workspace.db")
 
 def make_engine(url):
     # SQLite allows one writer; wait up to 30 s for a concurrent write instead of failing after 5 s.

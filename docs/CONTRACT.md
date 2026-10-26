@@ -1,15 +1,54 @@
-# CommodityEvidencePackage 1.0.0
+# The Workspace and the Data Core
 
-The public boundary is JSON (`GET /api/export`); the machine-readable schema is `GET /api/export/schema` and app/evidence-v1.schema.json. Schema objects are closed: unknown properties are rejected. Breaking changes require a new package version and migration/replay compatibility notes. The application release number is distinct from this contract number.
+The export contract, **CommodityEvidencePackage 1.0.0**, belongs to the Data Core and is unchanged: its schema, the
+closed field list and the ten forbidden analytical fields are documented in the Core repository (`docs/CONTRACT.md`,
+`GET /api/export/schema`). Leads, research, investigations, map records and paper trades never enter it.
 
-A package contains `records`, `entities`, `identity_evidence`, `relationships`, `sources`, `documents`, `build_manifest`, package/pipeline versions and `build_hash`. A consumer needs no internal database access. Run `python scripts/consume_evidence.py path/to/package.json` for an independent schema-validating example.
+This note is the Workspace's side of the connection: what it asks the Core for, what it sends, and what it stores.
 
-Each record has stable external entity ID/type, canonical name/aliases, facility type, country/region/commodity, industrial attribute, exact reported value/unit, normalized value/unit, valid interval, publication/retrieval dates, source/document IDs, content hash and locator, publisher/URL, resolution and quality status/codes, synthetic marker, parser/pipeline/package versions. These IDs are upstream identities, not authoritative private MEI identities.
+## What the Workspace asks the Core for
 
-Normalized numbers and relationship percentages are decimal strings to preserve exact precision. Capacity normalizes to t/year, power to MW, shares to percentage; status remains a reported categorical value with null numeric normalization. Native intervals use inclusive ISO dates; absent end means open-ended source assertion. Observation date is distinct from publication/retrieval; unknown publication is null with WARN. No date is inferred from an article unless the curator explicitly configures its justified meaning.
+All through [app/core_client.py](../app/core_client.py), never the Core database. Lists are read page by page
+(1,000 per request) and each list at most once per Workspace request.
 
-Entities include companies even when no capacity fact exists. Identity evidence associates registration with a document and locator. Relationships distinguish OWNS and OPERATES and carry exact share/date/source information. Null share means unspecified, not zero. Sources include publisher and access/retention notes. Documents include original URL, media type, version, hash, storage reference and dates. Snapshot bytes are supplied separately in frozen evidence bundles; the package alone is not a copyright license.
+| Need | Core API | Used by |
+|---|---|---|
+| Plants and companies, with their names and aliases | `GET /api/records/entities`, `GET /api/records/entities/{id}` | leads (matching news to plants, search), research, investigations, map, assistant |
+| Which plant replaced which | `GET /api/records/supersessions` | lead matching (a replaced plant points to the one that replaced it) |
+| Documents (each ID is one exact version) and their saved bytes | `GET /api/records/documents[/{id}]`, `GET /api/documents/{id}/content` | lead confirmation, investigations, map, screens |
+| Sources | `GET /api/records/sources` | screens, assistant |
+| Facts | `GET /api/records/observations[/{id}]`, `?document_id=`, `?entity_id=` | lead confirmation, assistant, screens |
+| Ownership and operator links, and when the Core recorded them | `GET /api/records/relationships`, `GET /api/records/audit?record_id=` | research event chains |
+| Health | `GET /api/health` | Workspace health |
 
-Build manifests identify input document/hash, parser/pipeline versions and logical output hash. Frozen replay re-extracts parser-produced records and verifies values/dates/identity decisions; it explicitly counts manually entered records whose normalization alone is verified. Build/package hash uses canonical ordering and logical content, while recorded provenance timestamps remain included. Online reretrieval is allowed to produce a different document version; use frozen bytes for equivalence.
+## What the Workspace sends
 
-BLOCK/ERROR prohibit export. WARN facts remain included and visibly marked; no automatic conflict winner is inferred. The closed schema and recursive validator reject impact_score, surprise_score, market_state, analogue_score, supply_pressure, price_prediction, procurement_signal, trading_signal, factor_weight and alpha anywhere. No private analytical outputs, recommendations, securities or trading records are exported.
+Only **candidate facts**: `POST /api/documents/{id}/extract` on a Core document, with the plant name as written, the
+country, the dates, the attribute and unit and the exact words around the value. The Core treats it like any other
+fact: source check, matching (unclear names go to its human review), quality checks; only then is a fact recorded. The
+Workspace records each proposal and the Core's answer in its own history. It never writes plants, sources, documents,
+links or reviews; curators do that in the Core's screens.
+
+The Workspace authenticates with its own credential (`CORE_TOKEN`), best registered in the Core's
+`WRITE_IDENTITIES_JSON` as the identity `workspace`, so the Core's history names the Workspace.
+
+## What the Workspace stores
+
+Core IDs, never copies of Core records. A reference keeps its meaning next year, even when newer facts arrive:
+
+| Workspace record | Core references |
+|---|---|
+| Confirmed lead | primary-source document version (`primary_document_id`) and, optionally, the fact it supports (`observation_id`) |
+| Lead revision | plants the event text mentions (`matched_entity_ids`) |
+| Research event | plants (`entity_ids`); its chain keeps every ownership or operator link it used, with the link's document version (`core_relationships`) |
+| Investigation | affected plants (`asset_ids`); evidence entries keep the document version (`document_id`) |
+| Map location and dependency | plants and the supporting document version |
+
+These are plain fields, not database links: the Core's database is not the Workspace's. The Workspace checks them
+through the API when a record is written. The lead search text is the one derived value: it includes the current Core
+names of matched plants and is recomputed by `python -m app.permutable refresh-search`.
+
+## When the Core is unavailable
+
+The Workspace still starts and its own records stay readable. Its health check reports the Core as unavailable, and
+anything that needs the Core answers 503 with "Data Core unavailable" instead of guessing.

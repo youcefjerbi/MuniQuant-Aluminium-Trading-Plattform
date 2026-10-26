@@ -1,0 +1,107 @@
+# The Data Core and the Workspace together, each with its own database. The Core is built from a
+# checkout of its repository (CORE_HOME, default ../muniquant-data-core). The Workspace reaches the
+# Core only through its API, with its own credential: CORE_TOKEN is registered in the Core's
+# WRITE_IDENTITIES_JSON as the identity "workspace", so the Core's history names it.
+#   docker compose -f compose.together.yaml up --build -d
+services:
+  core-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: muniquant
+      POSTGRES_USER: muniquant
+      POSTGRES_PASSWORD: ${CORE_POSTGRES_PASSWORD:?Set CORE_POSTGRES_PASSWORD in .env}
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muniquant -d muniquant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  core-migrate:
+    build: ${CORE_HOME:-../muniquant-data-core}
+    environment:
+      DATABASE_URL: postgresql+psycopg://muniquant:${CORE_POSTGRES_PASSWORD}@core-db:5432/muniquant
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      core-db:
+        condition: service_healthy
+  core:
+    build: ${CORE_HOME:-../muniquant-data-core}
+    environment:
+      DATABASE_URL: postgresql+psycopg://muniquant:${CORE_POSTGRES_PASSWORD}@core-db:5432/muniquant
+      SNAPSHOT_DIR: /app/data/snapshots
+      WRITE_TOKEN: ${CORE_WRITE_TOKEN:?Set CORE_WRITE_TOKEN in .env}
+      WRITE_ACTOR: ${CORE_WRITE_ACTOR:-core-curator}
+      WRITE_IDENTITIES_JSON: '{"${CORE_TOKEN:?Set CORE_TOKEN in .env}": "workspace"}'
+      REQUIRE_READ_AUTH: ${CORE_REQUIRE_READ_AUTH:-false}
+    ports:
+      - "127.0.0.1:${CORE_PORT:-8000}:8000"
+    volumes:
+      - core_evidence_data:/app/data
+    depends_on:
+      core-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: workspace
+      POSTGRES_USER: workspace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace -d workspace"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://workspace:${POSTGRES_PASSWORD}@db:5432/workspace
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://workspace:${POSTGRES_PASSWORD}@db:5432/workspace
+      SNAPSHOT_DIR: /app/data/snapshots
+      CORE_URL: http://core:8000
+      CORE_PUBLIC_URL: http://127.0.0.1:${CORE_PORT:-8000}
+      CORE_TOKEN: ${CORE_TOKEN}
+      WRITE_TOKEN: ${WRITE_TOKEN:?Set WRITE_TOKEN in .env}
+      WRITE_ACTOR: ${WRITE_ACTOR:-workspace-curator}
+      WRITE_IDENTITIES_JSON: ${WRITE_IDENTITIES_JSON:-}
+      REQUIRE_READ_AUTH: ${REQUIRE_READ_AUTH:-false}
+      READ_TOKEN: ${READ_TOKEN:-}
+      LICENSED_CREDENTIALS_JSON: ${LICENSED_CREDENTIALS_JSON:-}
+      PERMUTABLE_API_KEY: ${PERMUTABLE_API_KEY:-}
+      PERMUTABLE_TICKERS: ${PERMUTABLE_TICKERS:-ALI_COM}
+      CHAT_AI_ENABLED: ${CHAT_AI_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CHAT_MODEL: ${CHAT_MODEL:-}
+    ports:
+      - "127.0.0.1:${WORKSPACE_PORT:-8001}:8000"
+    volumes:
+      - lead_data:/app/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      core:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+volumes:
+  core_postgres_data:
+  core_evidence_data:
+  postgres_data:
+  lead_data:

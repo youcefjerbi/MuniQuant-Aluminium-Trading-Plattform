@@ -1,21 +1,23 @@
+# The Workspace alone. It needs a running Data Core: by default one on this machine at port 8000
+# (for example the Core's own `docker compose up`). To run both together, use compose.together.yaml.
 services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: muniquant
-      POSTGRES_USER: muniquant
+      POSTGRES_DB: workspace
+      POSTGRES_USER: workspace
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U muniquant -d muniquant"]
+      test: ["CMD-SHELL", "pg_isready -U workspace -d workspace"]
       interval: 5s
       timeout: 5s
       retries: 10
   migrate:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg://muniquant:${POSTGRES_PASSWORD}@db:5432/muniquant
+      DATABASE_URL: postgresql+psycopg://workspace:${POSTGRES_PASSWORD}@db:5432/workspace
     command: ["alembic", "upgrade", "head"]
     depends_on:
       db:
@@ -23,22 +25,28 @@ services:
   app:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg://muniquant:${POSTGRES_PASSWORD}@db:5432/muniquant
+      DATABASE_URL: postgresql+psycopg://workspace:${POSTGRES_PASSWORD}@db:5432/workspace
       SNAPSHOT_DIR: /app/data/snapshots
+      CORE_URL: ${CORE_URL:-http://host.docker.internal:8000}
+      CORE_PUBLIC_URL: ${CORE_PUBLIC_URL:-http://127.0.0.1:8000}
+      CORE_TOKEN: ${CORE_TOKEN:-}
       WRITE_TOKEN: ${WRITE_TOKEN:?Set WRITE_TOKEN in .env}
-      WRITE_ACTOR: ${WRITE_ACTOR:-pilot-curator}
+      WRITE_ACTOR: ${WRITE_ACTOR:-workspace-curator}
       WRITE_IDENTITIES_JSON: ${WRITE_IDENTITIES_JSON:-}
       REQUIRE_READ_AUTH: ${REQUIRE_READ_AUTH:-false}
       READ_TOKEN: ${READ_TOKEN:-}
+      LICENSED_CREDENTIALS_JSON: ${LICENSED_CREDENTIALS_JSON:-}
       PERMUTABLE_API_KEY: ${PERMUTABLE_API_KEY:-}
       PERMUTABLE_TICKERS: ${PERMUTABLE_TICKERS:-ALI_COM}
       CHAT_AI_ENABLED: ${CHAT_AI_ENABLED:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       CHAT_MODEL: ${CHAT_MODEL:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${WORKSPACE_PORT:-8001}:8000"
     volumes:
-      - evidence_data:/app/data
+      - lead_data:/app/data
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -49,4 +57,4 @@ services:
       retries: 5
 volumes:
   postgres_data:
-  evidence_data:
+  lead_data:

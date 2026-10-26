@@ -1,4 +1,6 @@
-"""Read-only trader assistant with bounded retrieval and optional AI synthesis."""
+"""Read-only trader assistant with bounded retrieval and optional AI synthesis.
+
+Asset records come from the Data Core API; leads, cases and paper records from the Workspace."""
 import json
 import asyncio
 from contextlib import aclosing
@@ -12,7 +14,7 @@ from urllib.error import URLError
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, or_, cast, Text, func, literal_column
 from .event_search import tokens
-from .models import Entity, EntityAlias, Lead, LeadRevision, LeadHeadline, Observation, Document, Source, now
+from .models import Lead, LeadRevision, LeadHeadline, now
 from .investigations import Investigation
 from .research_models import PaperAccount, PaperPolicy, PaperDecision, ResearchQuote
 
@@ -50,7 +52,12 @@ def keyword_filter(columns, terms):
                  for column in columns for term in terms))
 
 
-def retrieve(s, data):
+def matches(values, terms):
+    """Case-insensitive substring match, as keyword_filter does in the database."""
+    return any(term.casefold() in (value or '').casefold() for value in values for term in terms)
+
+
+def retrieve(s, data, core):
     terms = [t for t in dict.fromkeys(tokens(data.message)) if t not in STOP][:12]
     # Short conversational follow-ups inherit the previous user question.
     if not terms:
@@ -99,25 +106,23 @@ def retrieve(s, data):
             add('lead',lead.id,title,excerpt,lead.event_date or lead.last_seen_at,'#leads','Unverified vendor lead')
 
     elif scope == 'assets':
-        query = select(Entity)
-        if terms:
-            aliases = select(EntityAlias.id).where(EntityAlias.entity_id == Entity.id,
-                keyword_filter([EntityAlias.name],terms)).exists()
-            query = query.where(or_(keyword_filter([Entity.name,Entity.country,Entity.facility_type],terms),aliases))
-        for entity in s.scalars(query.order_by(Entity.name,Entity.id).limit(6)):
-            add('asset',entity.id,entity.name,
-                f"Registered {entity.kind}; country {entity.country}; type {entity.facility_type or entity.kind}.",
+        entities = [e for e in core.entities() if not terms or matches([e['name'],e['country'],e['facility_type'],*e['aliases']],terms)]
+        sources = {source['id']: source for source in core.sources()}
+        for entity in sorted(entities, key=lambda e: (e['name'],e['id']))[:6]:
+            add('asset',entity['id'],entity['name'],
+                f"Registered {entity['kind']}; country {entity['country']}; type {entity['facility_type'] or entity['kind']}.",
                 None,'#facilities','Registered identity')
-            observations = s.execute(select(Observation,Document,Source).join(Document,Document.id==Observation.document_id).join(Source,Source.id==Document.source_id)
-                .where(Observation.entity_id == entity.id).order_by(Observation.valid_from.desc(),
-                  Observation.recorded_at.desc(),Observation.id).limit(3)).all()
-            for observation, doc, source in observations:
-                add('observation',observation.id,entity.name+' · '+observation.attribute,
-                    f"Reported: {observation.reported_value} {observation.reported_unit}; "
-                    f"valid {observation.valid_from} to {observation.valid_to or 'open'}. "
-                    f"Quality: {observation.quality_status}. Source: {doc.title}; "
-                    f"locator: {observation.evidence_reference}.",
-                    observation.valid_from,'#evidence',('Synthetic fixture · not verified industrial evidence' if source.source_type=='synthetic' else 'Sourced observation · check date and quality'),doc.id)
+            observations = sorted(core.observations(entity_id=entity['id']), key=lambda o: o['id'])
+            observations = sorted(sorted(observations, key=lambda o: o['recorded_at'], reverse=True), key=lambda o: o['valid_from'], reverse=True)[:3]
+            for observation in observations:
+                doc = core.document(observation['document_id'])
+                source = sources.get(doc['source_id'], {})
+                add('observation',observation['id'],entity['name']+' · '+observation['attribute'],
+                    f"Reported: {observation['reported_value']} {observation['reported_unit']}; "
+                    f"valid {observation['valid_from']} to {observation['valid_to'] or 'open'}. "
+                    f"Quality: {observation['quality_status']}. Source: {doc['title']}; "
+                    f"locator: {observation['evidence_reference']}.",
+                    observation['valid_from'],'#evidence',('Synthetic fixture · not verified industrial evidence' if source.get('source_type')=='synthetic' else 'Sourced observation · check date and quality'),doc['id'])
 
     elif scope == 'investigations':
         query = select(Investigation)
@@ -223,8 +228,8 @@ def synthesize(data, scope, sources):
     return answer[:10000]
 
 
-def answer(s, data):
-    scope, sources = retrieve(s,data)
+def answer(s, data, core):
+    scope, sources = retrieve(s,data,core)
     reply = local_answer(scope,sources)
     mode, warning = 'local', None
     if data.use_ai and sources:

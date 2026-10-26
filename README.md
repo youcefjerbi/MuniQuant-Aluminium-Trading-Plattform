@@ -1,146 +1,112 @@
-# MuniQuant Aluminium Platform
+# MuniQuant Workspace
 
-An evidence-first industrial evidence workspace built with **Python, C++17, and PostgreSQL**, with a responsive web interface.
+Where we experiment: **Permutable news leads, research and practice trading, investigations and the map**, with a
+responsive web interface. Built with Python and PostgreSQL (SQLite for local use).
 
-Start with [Architecture & 12-week delivery plan](docs/ARCHITECTURE.md). Operational instructions are in [the runbook](docs/RUNBOOK.md).
+Facts about aluminium plants live in the separate **[Data Core](https://github.com/alekspetrov9e/muniquant-data-core)**:
+companies and plants, sources and the exact saved copies of their pages, dated facts, matching and human review,
+quality checks and the one export, CommodityEvidencePackage 1.0.0. The Workspace talks to the Core only through
+the Core's API ([app/core_client.py](app/core_client.py)): it stores Core IDs, never copies, and sends candidate facts
+that the Core checks with its own rules before accepting them. The two used to share one codebase and database;
+[the split note](docs/SPLIT.md) explains what moved where (DC1 step B).
 
-## Experimental event-chain and paper-engine branch
-
-This branch adds the sponsor-requested downstream **research and simulated trading extension** beyond the original PDF's upstream-only scope. The evidence module and its export contract remain separate. The original twelve-week reports describe the upstream baseline, not acceptance of a live trading system.
-
-Open **Patterns & paper trades** to register events, inspect relationship chains and historical analogues, configure a paper account, and inspect automatic BUY/SELL/HOLD decisions. Automation starts paused. There is no broker integration or real-money execution. The same page includes a TradingView market chart and local stored-price, simulated-fill and portfolio-performance charts. Chart selection does not alter the paper instrument; simulated trades do not move actual markets. See [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md) for the complete fictional demo, API ingestion, policy and limitations.
-
-## Scope and delivery status
-
-Implements the upstream-only **12 week Project Plan V01 (2)**. The sponsor approved implementation on 2026-10-10. The version 1.0.0 evidence contract is implemented; the application is a 1.0.0 release candidate. The upstream evidence module and exported evidence packages contain no trading signals, forecasts, recommendations or downstream proprietary logic. The experimental paper engine is an explicitly separate extension on this branch. Legacy market tables remain solely to preserve migration history.
-
-The real-source pilot registers **15 facilities, five companies, three publisher families**, three capacity observations from preserved document versions, and four sourced ownership/operator relationships. Capacity coverage is only two facilities. Broad final coverage (50–100 facilities / 5–10 families), independent consumer acceptance and shared-production operations remain open. See [validation](docs/VALIDATION.md) and [backlog](docs/BACKLOG.md).
-
-Reports: [Software Engineer 1](docs/reports/software-engineer-1.md), [Software Engineer 2](docs/reports/software-engineer-2.md), [Project Manager](docs/reports/project-manager.md). All cover twelve requirement weeks and distinguish implemented work, evidence and remaining acceptance work. They do not claim twelve elapsed weeks.
-
-The complete replacement includes a [ready-to-restore fictional database and evidence snapshots](fixtures/demo/README.md), plus a [seven-minute narrated walkthrough](docs/demo/walkthrough.mp4), [captions](docs/demo/walkthrough.srt) and [exact practice instructions](docs/demo/walkthrough.md). The video uses a natural AI narrator and animated cursor over actual platform screens. PostgreSQL schema and migrations are included; deployment credentials are configured locally.
+Start with [the architecture and data diagram](docs/ARCHITECTURE.md). Operations are in [the runbook](docs/RUNBOOK.md);
+how the Workspace uses the Core is in [the contract note](docs/CONTRACT.md).
 
 ## Working features
 
-- Controlled company/facility masters, countries, regions, commodities, relational aliases, audited supersession and sourced ownership/operator relationships.
-- Append-only capacity/status/power/ownership facts with exact Decimal normalization, native dates and source locators.
-- Audited source access; HTTPS acquisition with checked/pinned public IPs, approved hosts, redirects, retries, limits and attempt logs.
-- Byte-exact HTML/PDF/CSV snapshots, SHA-256 content addressing and document version history.
-- Versioned configurable HTML/PDF/CSV extraction, deterministic candidate identities, ambiguity review and individually attributable write credentials.
-- INFO/WARN/ERROR/BLOCK quality findings, PASS/WARN/FAIL aggregation and blocked unsafe exports.
-- Closed CommodityEvidencePackage v1 schema; frozen parser-input replay and verified logical output equivalence.
-- Browser forms backed by actual APIs; migrations, PostgreSQL CI and a non-root Docker deployment.
+- **Event leads** (Permutable AI, licensed, lead-only): events and headlines for aluminium point curators to possible
+  curtailments, restarts, outages or ownership changes and show which Core plants they mention. Leads are not
+  evidence: confirm each one with a primary source in the Core, propose the fact to the Core, then confirm the lead
+  with the Core document and fact. Vendor responses, their saved copies and the leads stay in the Workspace and never
+  reach the Core. See [ADR 0003](docs/adr/0003-permutable-lead-source.md).
+- **Search events by text similarity**: on Event leads, a query such as `smelter power outage` ranks events by shared
+  words over title, summary, topic, matched Core plant names and headlines. PostgreSQL uses an indexed full-text
+  projection; SQLite uses offline TF-IDF. See [scalable event storage](docs/SCALABLE_EVENT_STORAGE.md).
+- **Patterns & paper trades**: experimental event chains over Core plants and their ownership links, historical
+  analogues and a cash-only paper account with automatic BUY/SELL/HOLD decisions. No broker, no real money. See
+  [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md).
+- **Investigations**: analyst-led cases with evidence from Core documents, hypotheses, contradictions, tasks and a
+  revision history. See [the investigation guide](docs/INVESTIGATIONS.md).
+- **Asset map**: locations and dependencies of Core plants, each with a Core source document. See [the map guide](docs/ASSET_MAP.md).
+- **Trader assistant**: finds stored leads, Core plant facts, investigations and paper decisions with source references.
+  See [the chatbot guide](docs/TRADER_CHATBOT.md).
 
-Python owns acquisition, parsing, transactions and unit conversion. C++ only ranks name candidates using Unicode edit distance. Its measured microbenchmark was 58.75× faster than equivalent Python; this is not an end-to-end throughput claim.
+## Run locally with Python
 
-## Licensed event leads (Permutable AI)
-
-Permutable AI events and headlines for aluminium (`ALI_COM`, COMEX) arrive on the **Event leads** screen as curator leads: each points to a possible curtailment, restart, outage or ownership change and shows which registered assets it mentions. Leads are not evidence. Confirm each one by capturing the primary source and recording the observation from it. Only factual feeds are captured; vendor sentiment, impact, signals and forecasts are not stored. Set `PERMUTABLE_API_KEY`, then run `python -m app.permutable setup` and schedule `python -m app.permutable poll`. See [ADR 0003](docs/adr/0003-permutable-lead-source.md) and [the runbook](docs/RUNBOOK.md).
-
-## Search events by text similarity
-
-On **Event leads**, enter a query such as `smelter power outage` and click **Search**. Events with shared words appear in similarity order, with a score and matched terms. Status, topic and asset filters still apply. Clear the query and click Search to restore newest-first ordering.
-
-The API supports `GET /api/leads?search=smelter%20power%20outage&limit=20&offset=0`. Ranking searches the latest event title and summary, topic, matched asset names and linked headlines. PostgreSQL uses indexed full-text relevance; SQLite uses offline TF-IDF cosine similarity. Scores measure lexical overlap, not probabilities or market impact; synonyms and translated equivalents are not inferred. Run migrations before using indexed PostgreSQL search. PostgreSQL deployments use a database-maintained search projection and GIN index; filtering, relevance ranking and pagination run in the database. SQLite retains the local TF-IDF fallback. See [scalable event storage](docs/SCALABLE_EVENT_STORAGE.md) for migration and growth guidance.
-
-## Starting guide: run locally with Python
-
-Requires Python 3.11+ and a C++17 compiler (Apple Command Line Tools on macOS, g++ on Linux). Python 3.12 is used in CI and the container.
-
-On macOS, install the compiler if needed with `xcode-select --install`, and complete the installation before continuing.
-
-Open a terminal in the cloned `MuniQuant-Aluminium-Trading-Plattform` folder (the folder containing this README and `requirements.lock`). Run the following commands in the same terminal:
+Requires Python 3.11+ and a running Data Core (its README shows how; here it runs on port 8000).
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.lock
-pip install --no-build-isolation -e .
+pip install -e .
 alembic upgrade head
-python -m app.seed
 export WRITE_TOKEN="$(python -c 'import secrets; print(secrets.token_hex(24))')"
 printf '%s\n' "$WRITE_TOKEN"
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+CORE_URL=http://127.0.0.1:8000 CORE_TOKEN=... uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
-Keep the terminal open while using the application. Once the server has started, open [the workspace](http://127.0.0.1:8000) in your browser. Open **Workspace access** and paste the token printed immediately before the server started to enable editing. The browser retains the token only until reload. API documentation is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+Open [the Workspace](http://127.0.0.1:8001), choose **Workspace access** and paste the printed token to enable editing.
+`CORE_TOKEN` is the Workspace's credential for the Core (its `WRITE_TOKEN`, or better an entry `"<token>": "workspace"`
+in the Core's `WRITE_IDENTITIES_JSON`, so the Core's history names the Workspace); it is needed to propose facts and
+for a Core that protects reads. SQLite is the default (`data/workspace.db`, lead-feed copies in `data/snapshots`); set
+`DATABASE_URL` and `SNAPSHOT_DIR` for anything else. Without a reachable Core the Workspace still starts; its health
+check and the Core-backed pages say the Core is unavailable.
 
-The seed command adds fictional demonstration data; omit it if you want an empty workspace. This address runs on your computer; cloning the repository does not create a public hosted website.
+For the fictional demo, restore the Core's demo in the Core repository and this repository's demo here
+(`python scripts/restore_demo.py`), then start both on them; see [fixtures/demo](fixtures/demo/README.md).
 
-To stop the server, press **Ctrl+C**. To start it again, activate the environment with `source .venv/bin/activate`, generate and print a new `WRITE_TOKEN` using the commands above, and run the `uvicorn` command again. Your database and evidence files remain saved. Without `WRITE_TOKEN`, read access works but all mutations are disabled.
-
-SQLite is the default local database at `data/muniquant.db`. PostgreSQL is the shared deployment target. Set `DATABASE_URL` before running migrations and the app to use it.
-
-## Start with PostgreSQL and Docker
+## Run with PostgreSQL and Docker
 
 ```sh
 cp .env.example .env
-# Replace both placeholder secrets with independent generated hexadecimal strings.
-docker compose up --build -d
-# Optional demo data:
-docker compose exec app python -m app.seed
+# Replace the placeholder secrets with independent generated hexadecimal strings.
+docker compose up --build -d                                  # the Workspace alone, using a Core at CORE_URL
+docker compose -f compose.together.yaml up --build -d         # the Data Core and the Workspace together
 ```
 
-Open [the workspace](http://127.0.0.1:8000). The migration service runs before the app. PostgreSQL and snapshots have separate persistent volumes. Use `docker compose down` to stop without deleting data. Do not use `down -v` unless you intend to delete the database and evidence volumes.
+`compose.together.yaml` builds the Core from a checkout of its repository (`CORE_HOME`, default `../muniquant-data-core`);
+the Core answers on port 8000 and the Workspace on port 8001, each with its own PostgreSQL database and volumes.
+`docker compose down` stops without deleting data.
 
-## Verify and freeze
+## Test
 
 ```sh
 pytest -q
+TEST_DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/test_db pytest -q
 alembic check
-python scripts/export_v1_schema.py
-python -m app.evidence_cli export data/evidence-v1.json
-python -m app.evidence_cli freeze data/evidence-v1.zip
-python -m app.evidence_cli replay data/evidence-v1.zip
 ```
 
-Output files must not already exist. Replay is offline and re-extracts parser-produced records from preserved bytes. Manually entered facts receive normalization verification only; the result explicitly reports their count. Frozen bundles are evidence artifacts, not operational database backups.
+The tests run every Workspace feature against a real Data Core: each test starts the Core as its own process with a
+new database, from `CORE_HOME` (default `../muniquant-data-core`) with `CORE_PYTHON` (default its `.venv/bin/python`).
+`tests/test_together.py` checks a running pair, for example the Docker Compose one; CI runs it
+([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-## Real-source demonstration
-
-Use a separate database and snapshot directory so fictional fixtures cannot mix with public-source evidence:
+## Split an existing platform database
 
 ```sh
-DATABASE_URL=sqlite:///data/real-pilot.db alembic upgrade head
-DATABASE_URL=sqlite:///data/real-pilot.db SNAPSHOT_DIR=data/real-pilot-snapshots \
-  python -m app.pilot --online --as-of 2026-10-10 --output data/real-pilot-export
-DATABASE_URL=sqlite:///data/real-pilot.db SNAPSHOT_DIR=data/real-pilot-snapshots \
-  uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m tools.split data/platform.db --core data/core.db --workspace data/workspace.db --report data/split-report.json \
+  --snapshots data/snapshots --core-snapshots data/core-snapshots --workspace-snapshots data/workspace-snapshots --dry-run
 ```
 
-The online demonstration explicitly captures seven configured official publisher URLs. Live pages may change; use frozen replay to verify a previous capture. Undated facts use an observed-at date, not an inferred historical change date. Evidence links and limitations are described in [the runbook](docs/RUNBOOK.md).
+Drop `--dry-run` to write. The source is only read; both targets must be new; the report compares counts, IDs and
+fingerprints of every table before and after. Permutable material goes to the Workspace, everything else to the Core
+through the Core's own import tool. See [the runbook](docs/RUNBOOK.md#split-an-existing-platform-database).
 
 ## Project layout
 
 ```text
-app/                 Python API, domain services, schemas, bundle tooling
-app/static/          Browser interface (no separate Node build required)
-cpp/                 C++17 Unicode edit-distance candidate-ranking kernel
-migrations/          Versioned Alembic database schema
-scripts/             Contract generation and native benchmark
-tests/              Native, API, integrity and reproducibility tests
-docs/               Architecture, decisions, backlog and operations
+app/          Workspace API and screens: leads, research, investigations, map, chatbot; the Core API client
+tools/        Split tool (DC1 step B3)
+migrations/   The Workspace migration line
+scripts/      Demo restore, brand film rendering
+fixtures/     The Workspace half of the fictional demo
+tests/        Workspace tests against a running Data Core, the split tool and the together test
+docs/         Architecture, decisions, operations and guides
 ```
 
-## First useful workflow
-
-1. Browse a fictional facility and its historical observation.
-2. Open its source document and download the exact snapshot.
-3. Set Workspace access using your local write token.
-4. Register a permitted source, capture its content, and add a sourced observation.
-5. Try a facility alias under Resolution & review.
-6. Export a package from Data quality and verify its source/document references.
-
-Individual write identities are supported through WRITE_IDENTITIES_JSON. Reads are open by default on loopback. Enable REQUIRE_READ_AUTH and configure TLS/private ingress before shared deployment. No license for redistribution of third-party source data is implied by this repository.
-
-## Manual disruption investigations
-
-Open **Investigations** to create analyst-led cases independently of Permutable API events. Collect sourced evidence, hypotheses, contradictions and questions; track conclusions, investigator and review dates with a preserved revision history. Run `alembic upgrade head` after updating. See [the investigation guide](docs/INVESTIGATIONS.md).
-
-## Trader assistant
-
-Open **Trader assistant** from any page to find stored events, asset evidence,
-investigations and paper decisions with source references. Local mode works
-immediately without an AI key. Optional conversational AI summaries require
-server configuration, Workspace access and explicit selection in the chat panel.
-See [the chatbot guide](docs/TRADER_CHATBOT.md) for setup, data handling and limits.
+Individual write identities are supported through `WRITE_IDENTITIES_JSON`. Reads are open by default on loopback;
+enable `REQUIRE_READ_AUTH` and configure TLS/private ingress before shared deployment. Raw Permutable responses are
+licensed data: keep the snapshot store private and never commit captures. No licence for redistribution of
+third-party source data is implied by this repository.
