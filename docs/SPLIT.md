@@ -45,4 +45,7 @@ same result (B4). See [the runbook](RUNBOOK.md#split-an-existing-platform-databa
 
 The planning and delivery documents in this folder from before the split (ERD, data dictionary, source taxonomy, review
 policy, validation, UAT, requirements matrix, release notes, reports) describe the platform as one system. Their data
-parts now belong to the Data Core; its repository holds the current Core documentation.
+parts now belong to the Data Core, whose repository holds the current versions: decision records, data dictionary,
+source taxonomy, review policy, quality codes, risks and roadmap, the final demonstration and release notes. Since
+2026-10-26 the Core also keeps market data (its `docs/MARKET_DATA.md`); this repository's old `market_observations`
+table belongs to the old trading screens and is not that data.
