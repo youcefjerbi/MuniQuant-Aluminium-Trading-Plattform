@@ -1,0 +1,1 @@
+[{"event_id": "fixture-event-1", "ticker": "ALI_COM", "event_name": "Fictional smelter curtailment", "event_date": "2026-10-09T06:00:00", "summary": "Fjord Works curtails a potline after a power outage", "last_updated": "2026-10-09T08:00:00", "event_type": "Asset", "direction": "Bullish", "impact": "0.5", "topic_name": "Supply-Other"}]

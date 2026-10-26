@@ -12,7 +12,7 @@ from .research_models import ResearchEvent, PaperAccount
 from .research_schemas import EventIn, QuoteIn, OutcomeIn, PolicyIn
 
 
-def populate(s):
+def populate(s, core):
     if s.scalar(select(ResearchEvent.id).limit(1)) or s.get(PaperAccount, 'paper'):
         raise ValueError('Demo requires an empty research workspace; use a separate database')
     actor = 'fictional-paper-demo'
@@ -28,7 +28,7 @@ def populate(s):
             when = anchor - timedelta(minutes=(2 - step) * 10)
             result = research.ingest_event(s, EventIn(external_key=f'demo-history-{index}-{step}', kind=kind,
                 occurred_at=when, known_at=when, historical=True, title=title, summary='Fictional demonstration only',
-                countries=['NO'], tags=['fictional-demo', 'aluminium'], source_reference='synthetic:paper-demo'), actor)
+                countries=['NO'], tags=['fictional-demo', 'aluminium'], source_reference='synthetic:paper-demo'), actor, core)
         event_id = result['event']['id']
         quotes = []
         for suffix, delta, price in [('entry', timedelta(minutes=1), '100'), ('exit', timedelta(hours=24, minutes=1), '104')]:
@@ -45,12 +45,13 @@ def populate(s):
     ]):
         result = research.ingest_event(s, EventIn(external_key=f'demo-live-{step}', kind=kind,
             occurred_at=clock - timedelta(minutes=(2 - step) * 10), title=title, summary='Fictional demonstration only',
-            countries=['NO'], tags=['fictional-demo', 'aluminium'], source_reference='synthetic:paper-demo'), actor)
+            countries=['NO'], tags=['fictional-demo', 'aluminium'], source_reference='synthetic:paper-demo'), actor, core)
     return result
 
 
 if __name__ == '__main__':
+    from .core_client import CoreClient
     engine = make_engine(DATABASE_URL)
     with Session(engine) as session:
-        result = populate(session)
+        result = populate(session, CoreClient().cached())
         print(json.dumps({'mode': 'fictional paper demo', 'event_id': result['event']['id'], 'decision': result['decision']}, indent=2))

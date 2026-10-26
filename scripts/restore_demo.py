@@ -1,4 +1,9 @@
-"""Restore the bundled fictional SQLite demo without overwriting existing data."""
+"""Restore the bundled Workspace demo (SQLite) without overwriting existing data.
+
+The Workspace half of the platform's fictional demo, made by tools/split.py. Its plants and documents
+are in the Data Core's own demo (python scripts/restore_demo.py in the Data Core repository); run both
+for the full demo.
+"""
 import argparse
 import hashlib
 import json
@@ -11,7 +16,7 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--database', type=Path, default=Path('data/demo.db'))
-    parser.add_argument('--snapshots', type=Path, default=Path('data/demo-snapshots'))
+    parser.add_argument('--snapshots', type=Path, default=Path('data/demo-snapshots'), help='lead-feed saved copies, if the demo has any')
     args = parser.parse_args()
     if args.database.exists() or args.snapshots.exists():
         parser.error('Destination already exists. Choose new paths; existing data is never replaced.')
@@ -36,9 +41,10 @@ def main():
                 raise ValueError('Demo database contains broken references')
         args.snapshots.mkdir(parents=True, exist_ok=False)
         created_snapshots = True
-        for snapshot in (source / 'snapshots').iterdir():
-            if snapshot.is_file():
-                shutil.copy2(snapshot, args.snapshots / snapshot.name)
+        if (source / 'snapshots').is_dir():
+            for snapshot in (source / 'snapshots').iterdir():
+                if snapshot.is_file():
+                    shutil.copy2(snapshot, args.snapshots / snapshot.name)
         # An exclusive hard link also protects against another process creating the target.
         os.link(temporary, args.database)
     except Exception:
@@ -47,8 +53,8 @@ def main():
         raise
     finally:
         Path(temporary).unlink(missing_ok=True)
-    print('Restored fictional demo database:', args.database)
-    print('Preserved evidence snapshots:', args.snapshots)
+    print('Restored fictional Workspace demo database:', args.database)
+    print('Preserved lead-feed snapshots:', args.snapshots)
 
 if __name__ == '__main__':
     main()

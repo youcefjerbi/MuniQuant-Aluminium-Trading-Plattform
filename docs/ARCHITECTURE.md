@@ -1,29 +1,97 @@
-# Architecture — approved implementation
+# Architecture
 
-Status: sponsor authorized implementation on 2026-10-10 through the chat approval “i apporve on everythin that you do”. Requirements: 12 week Project Plan V01 (2).pdf, primary pages 1–28 (page 28 ends the original success criterion). Application release candidate 1.0.0rc1; evidence contract 1.0.0.
+Since DC1 (October 2026) the platform is two projects with one connection ([the split note](SPLIT.md)). This repository
+is the **Workspace**; the **Data Core** is the source of truth for plant, source and fact data.
 
-## Boundary
+## The two parts
 
-Permitted official source → audited access → bounded HTTPS capture → immutable byte snapshot → document version → versioned extraction → identity resolution → manual review when needed → dated industrial facts → quality → CommodityEvidencePackage v1. The responsibility ends at this package. Trading, predictions, recommendations, event impact and all prohibited downstream fields are excluded by a closed schema and recursive validation.
+```mermaid
+flowchart LR
+  P[Permutable API<br>news events and headlines] -- hints only --> W
+  O[Official sources<br>company sites, government, regulators] -- real evidence --> C
+  subgraph W[Workspace]
+    L[Leads] --- R[Research and practice trading]
+    I[Investigations] --- M[Map]
+    WD[(Workspace database<br>own tables, lead store,<br>Core IDs as plain fields)]
+  end
+  subgraph C[Data Core]
+    F[Capture, saved copies,<br>matching, review, quality]
+    CD[(Core database<br>26 tables, 3 views)]
+  end
+  W -- "reads plants, names, documents, facts;<br>proposes candidate facts" --> A{{Core API}}
+  A --> C
+  C --> E[/CommodityEvidencePackage 1.0.0/]
+```
 
-## Components
+The Workspace knows the Core; the Core does not know the Workspace. The Workspace never touches the Core database,
+stores Core IDs instead of copies, and sends candidate facts that the Core checks before accepting them
+([CONTRACT.md](CONTRACT.md)). Permutable material stays in the Workspace.
 
-FastAPI and a same-origin static curator UI use SQLAlchemy and additive Alembic migrations. PostgreSQL is the deployment database; SQLite supports local use/tests. Normalized reference and specialization tables coexist with legacy entity IDs. Native date and exact Decimal specialization records are authoritative; legacy float fields are compatibility representations. Company-facility shares are exact and dated. Document versions link immutable snapshots; reviewed aliases and supersessions retain audit metadata.
+## Workspace components
 
-Python handles network, parsing, normalization, transactions, quality and export. The C++17 pybind11 component performs bounded Unicode edit distance only. A seeded 1,000-pair microbenchmark verified equivalent outputs and measured 58.75× speedup on this workstation. Unique exact/normalized/alias matches alone resolve automatically. Similarity is a review suggestion.
+FastAPI with a same-origin static interface, SQLAlchemy and one straight Alembic migration line. PostgreSQL is the
+deployment database; SQLite supports local use and tests. `app/core_client.py` is the only way to Core data; each
+request uses one cached view, so a Core list is read once per request.
 
-Retrieval requires an audited approved host list, HTTPS/public addresses, pinned checked IPs with TLS hostname verification, redirect revalidation, bounded bytes and retries with attempt logs. No general crawler. Raw bytes are content-addressed and written atomically. Literal extraction recipes avoid user-supplied regular expressions. PDF extraction is text-based and bounded, with no OCR. Source rights must be reviewed before redistribution.
+- **Leads** (`app/permutable.py`, `app/acquisition.py`): licensed lead-feed capture with audited access decisions,
+  credentials bound to approved hosts, pinned public addresses, retries, attempt logs and exact saved copies, into the
+  Workspace's lead store; a versioned parser derives leads, revisions and headlines and matches event text against
+  current Core plant names. Replay proves stored lead facts equal the saved responses.
+- **Research and practice trading** (`app/research.py`): event chains over Core plants and the ownership and operator
+  links the Core had recorded by the time an event became known; a cash-only paper ledger.
+- **Investigations** (`app/investigations.py`) and **the map** (`app/asset_map.py`): analyst records that cite Core
+  documents and plants.
+- **Trader assistant** (`app/chatbot.py`): bounded retrieval over Workspace records and Core facts.
 
-Licensed event feeds (Permutable AI, ADR 0003) enter through the same audited, credential-referenced acquisition path as lead-only sources. Their preserved responses become curator leads; they are never cited as evidence and never cross the package boundary.
+## Data diagram
 
-## Integrity and reproducibility
+Workspace tables. Dashed links are Core references: plain fields holding Data Core IDs, checked through the API.
 
-Relational foreign keys and range/date constraints complement application dimension checks. Quality findings carry code, severity, affected record and remediation. BLOCK/ERROR prohibit v1 export. Stable build/candidate identifiers and parser specifications permit offline re-extraction. SHA-256 verifies snapshots, recipes and packages. Manual facts are explicitly reported as normalization-only verification.
+```mermaid
+erDiagram
+  LEAD_SOURCE ||--o{ LEAD_SOURCE_ACCESS : governs
+  LEAD_SOURCE ||--o{ LEAD_DOCUMENT : publishes
+  LEAD_SOURCE ||--o{ LEAD_SOURCE_DOCUMENT : relates
+  LEAD_DOCUMENT ||--o{ LEAD_SOURCE_DOCUMENT : relates
+  LEAD_DOCUMENT ||--o| LEAD_DOCUMENT_VERSION : versions
+  LEAD_SNAPSHOT ||--o{ LEAD_DOCUMENT_VERSION : preserves
+  LEAD_RUN ||--o{ LEAD_RETRIEVAL_ATTEMPT : logs
+  LEAD_SOURCE ||--o{ LEAD : feeds
+  LEAD ||--o{ LEAD_REVISION : revisions
+  LEAD ||--o{ LEAD_HEADLINE : headlines
+  LEAD_DOCUMENT ||--o{ LEAD_REVISION : carries
+  LEAD_DOCUMENT ||--o{ LEAD_HEADLINE : carries
+  RESEARCH_EVENT ||--o| RESEARCH_OUTCOME : labels
+  RESEARCH_QUOTE ||--o{ RESEARCH_OUTCOME : prices
+  PAPER_POLICY ||--o{ RESEARCH_PAPER_ACCOUNT : configures
+  RESEARCH_EVENT ||--o| RESEARCH_PAPER_DECISION : decides
+  INVESTIGATION ||--o{ INVESTIGATION_REVISION : history
+  INVESTIGATION ||--o{ INVESTIGATION_ENTRY : notebook
+  INVESTIGATION ||--o{ INVESTIGATION_TASK : tasks
+  INVESTIGATION_TASK ||--o{ INVESTIGATION_TASK_EVIDENCE : cites
+  INVESTIGATION_ENTRY ||--o{ INVESTIGATION_TASK_EVIDENCE : cited_by
+  CORE_DOCUMENT ||..o{ LEAD : "confirms (primary_document_id)"
+  CORE_OBSERVATION ||..o{ LEAD : "supports (observation_id)"
+  CORE_DOCUMENT ||..o{ INVESTIGATION_ENTRY : "evidence (document_id)"
+  CORE_ENTITY ||..o{ ASSET_LOCATION : "placed (entity_id)"
+  CORE_DOCUMENT ||..o{ ASSET_LOCATION : "supports (document_id)"
+  CORE_ENTITY ||..o{ ASSET_DEPENDENCY : "from / to"
+  CORE_DOCUMENT ||..o{ ASSET_DEPENDENCY : "supports (document_id)"
+```
 
-The closed v1 schema rejects unknown fields. Exact numeric values are decimal strings so consumers cannot silently lose precision. Sources, documents, entities, identity evidence and relationships have validated references. Breaking changes require a contract version increase. Legacy draft exports and stored-output bundle tooling are compatibility paths; use evidence_cli for v1 freezing and replay.
+Also in the Workspace database: `audit` (the Workspace's change history) and the old trading screens' tables
+`market_observations`, `paper_accounts` and `paper_orders`. Research events and lead revisions keep Core plant IDs in
+JSON fields. The Core's own tables and views are drawn in its repository (`docs/DATA_DIAGRAM.md`).
 
-## Deployment and acceptance
+## Integrity
 
-Docker uses a non-root application, migration job, private PostgreSQL and loopback app port. Write credentials may map separately to reviewer identities. Optional authenticated reads and a separate read-only token are implemented. Enable REQUIRE_READ_AUTH and configure TLS/private ingress and credential lifecycle before shared use. PostgreSQL plus snapshot storage need coordinated backups.
+Database constraints and foreign keys hold within the Workspace; Core references are checked through the API on
+write and kept unchanged afterwards. Lead-feed responses are content-addressed and verified on every read. Writes need
+a Workspace credential (`WRITE_TOKEN` or `WRITE_IDENTITIES_JSON`); reads can be protected with `REQUIRE_READ_AUTH`.
 
-Gate 1 approval is recorded. Gates 2–4 and the technical portion of Gate 5 have demonstrable retrieval, resolution, negative-fixture and frozen-contract evidence. Independent consumer sign-off and Gate 6 sponsor handover acceptance are not inferred from implementation approval. The real pilot has 15 identities / three publisher families, with capacity evidence for two facilities. Broader curated coverage, performance/concurrency acceptance and production operations remain explicit backlog items.
+## Deployment
+
+Docker runs a non-root application, a migration job, a private PostgreSQL and a loopback port, alone
+(`compose.yaml`, using a Core elsewhere) or together with the Core (`compose.together.yaml`). Each part needs its own
+coordinated database and snapshot backups ([RUNBOOK.md](RUNBOOK.md)). Enable read protection and TLS/private ingress
+before shared use.
