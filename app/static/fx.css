@@ -1,0 +1,99 @@
+/* Dynamic background, glass surfaces, bento video reel and interaction effects. Loaded after cinema.css. */
+@property --fx-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
+:root{--fx-glass:color-mix(in srgb,var(--surface) 68%,transparent);--fx-glass-strong:color-mix(in srgb,var(--surface) 84%,transparent);--fx-edge:color-mix(in srgb,var(--accent) 22%,var(--line));--fx-blur:blur(16px) saturate(1.25)}
+html{background:var(--bg)}
+html.fx-webgl body{background:transparent}
+.fx-background{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;display:block}
+html.fx-no-webgl body{background:radial-gradient(1200px 700px at 70% 10%,color-mix(in srgb,var(--accent) 16%,transparent),transparent),var(--bg)}
+
+/* Glass surfaces: the shader shows through panels, sidebar, header and footer. */
+html.fx-webgl .card,html.fx-webgl .notice,html.fx-webgl .export-panel,html.fx-webgl .workflow-card{background:var(--fx-glass);-webkit-backdrop-filter:var(--fx-blur);backdrop-filter:var(--fx-blur);border-color:var(--fx-edge);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 8%,transparent)}
+html.fx-webgl .sidebar{background:color-mix(in srgb,var(--nav) 62%,transparent);-webkit-backdrop-filter:var(--fx-blur);backdrop-filter:var(--fx-blur)}
+html.fx-webgl header{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+html.fx-webgl .stat{background:var(--fx-glass);-webkit-backdrop-filter:var(--fx-blur);backdrop-filter:var(--fx-blur);border:1px solid var(--fx-edge);border-radius:10px;padding:20px 22px}
+html.fx-webgl table{background:transparent}
+html.fx-webgl .card table th{background:var(--fx-glass-strong)}
+html.fx-webgl footer{position:relative}
+
+/* Cursor spotlight and animated conic border on hover. */
+.card,.stat,.workflow-card,.fx-tile,.notice,.export-panel{position:relative;transform-style:preserve-3d;will-change:transform}
+.card::after,.stat::after,.workflow-card::after,.fx-tile::after,.notice::after,.export-panel::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .35s ease;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) 20%,transparent),transparent 70%)}
+.card:hover::after,.stat:hover::after,.workflow-card:hover::after,.fx-tile:hover::after,.notice:hover::after,.export-panel:hover::after{opacity:1}
+.workflow-card,.fx-tile{border:1px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,conic-gradient(from var(--fx-angle),var(--line),var(--accent),var(--line) 40%,var(--line)) border-box}
+html.fx-webgl .workflow-card{background:linear-gradient(var(--fx-glass),var(--fx-glass)) padding-box,conic-gradient(from var(--fx-angle),var(--line),var(--accent),var(--line) 40%,var(--line)) border-box}
+.workflow-card:hover,.fx-tile:hover{animation:fx-spin-border 4s linear infinite}
+@keyframes fx-spin-border{to{--fx-angle:360deg}}
+
+/* Cursor aura, ripple, nav indicator. */
+.fx-cursor{position:fixed;left:0;top:0;width:34px;height:34px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:90;opacity:0;transition:opacity .25s ease,background-color .25s ease;mix-blend-mode:normal}
+.fx-cursor.visible{opacity:.65}
+.fx-ripple{position:absolute;border-radius:50%;background:var(--accent);pointer-events:none;transform:scale(0)}
+.btn{position:relative;overflow:hidden}
+.sidebar nav{position:relative}
+.fx-nav-pill{position:absolute;left:0;right:0;top:0;border-radius:4px;background:var(--accent-soft);border-left:3px solid var(--accent);opacity:0;pointer-events:none;transition:transform .55s cubic-bezier(.34,1.4,.5,1),height .35s ease,opacity .25s ease}
+.fx-nav-pill.ready{opacity:1}
+.sidebar nav a{position:relative;z-index:1}
+.sidebar nav a.active{background:transparent;border-left-color:transparent}
+
+/* Kinetic typography. */
+.fx-word{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.12em;margin-bottom:-.12em}
+.fx-word-in{display:inline-block;will-change:transform}
+.fx-reel-head h2,.section-intro h2{transition:none}
+
+/* Marquee velocity skew. */
+.industry-marquee>div{transform:skewX(var(--fx-skew,0deg))}
+@keyframes fx-sheen{to{background-position:-200% 0}}
+#content>p:only-child{background:linear-gradient(90deg,var(--muted) 30%,var(--accent) 50%,var(--muted) 70%) 0 0/200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:fx-sheen 1.6s linear infinite}
+
+/* Header extras and scroll-to-top ring. */
+.fx-clock{font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.5px;font-variant-numeric:tabular-nums}
+.fx-palette-launch{font-size:11px;padding:7px 11px}
+.fx-top{position:fixed;right:22px;bottom:84px;width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;color:var(--ink);font-size:17px;z-index:60;background:conic-gradient(var(--accent) var(--scroll-progress,0%),var(--line) 0);opacity:0;transform:translateY(16px) scale(.8);pointer-events:none;transition:opacity .3s ease,transform .45s cubic-bezier(.34,1.56,.64,1)}
+.fx-top::before{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--surface);z-index:-1}
+.fx-top{isolation:isolate}
+.fx-top.visible{opacity:1;transform:none;pointer-events:auto}
+
+/* Command palette. */
+.fx-palette{width:min(560px,92vw);padding:0;border:1px solid var(--fx-edge);border-radius:12px;background:var(--fx-glass-strong);color:var(--ink);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);box-shadow:0 30px 80px #0008;margin-top:12vh}
+.fx-palette::backdrop{background:#0007;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.fx-palette input{width:100%;box-sizing:border-box;padding:18px 20px;font-size:15px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);outline:none}
+.fx-palette ul{list-style:none;margin:0;padding:8px;max-height:46vh;overflow:auto}
+.fx-palette li{display:flex;justify-content:space-between;gap:16px;padding:11px 12px;border-radius:7px;cursor:pointer;font-size:13px}
+.fx-palette li[aria-selected="true"]{background:var(--accent-soft);color:var(--ink)}
+.fx-palette li.empty{color:var(--muted);cursor:default}
+.fx-palette kbd{font:10px ui-monospace,Menlo,monospace;color:var(--muted)}
+.fx-palette[open]{animation:fx-palette-in .32s cubic-bezier(.34,1.56,.64,1)}
+@keyframes fx-palette-in{from{opacity:0;transform:translateY(-14px) scale(.96)}}
+
+/* Video reel: asymmetric bento grid with custom controls. */
+.fx-reel{margin:70px 0}
+.fx-reel-head{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:end;margin-bottom:26px}
+.fx-reel-head .eyebrow{grid-column:1/-1;font-size:9px;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+.fx-reel-head h2{margin:0;font-size:clamp(28px,3.4vw,46px);line-height:1.04;letter-spacing:-1.2px}
+.fx-reel-head p{margin:0;color:var(--muted);max-width:420px;font-size:13px;line-height:1.55}
+.fx-bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:190px;gap:14px}
+.fx-tile{margin:0;border-radius:14px;overflow:hidden;background:#050a07;min-height:0}
+.fx-tile{grid-column:span 2}.fx-wide{grid-row:span 2}
+.fx-film{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.fx-tile:hover .fx-film{transform:scale(1.06)}
+.fx-caption{position:absolute;left:0;right:0;top:0;padding:16px 18px;display:flex;flex-direction:column;gap:3px;color:#eaf5ec;background:linear-gradient(#050a07cc,transparent);pointer-events:none}
+.fx-caption strong{font-size:14px;letter-spacing:-.2px}.fx-caption span{font-size:11px;color:#a9c4b0}
+.fx-controls{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:#eaf5ec;background:#060d09b8;border:1px solid #ffffff1c;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .45s cubic-bezier(.34,1.56,.64,1)}
+.fx-tile:hover .fx-controls,.fx-tile:focus-within .fx-controls{opacity:1;transform:none}
+.fx-control{border:0;background:#ffffff14;color:inherit;font-size:11px;padding:6px 10px;border-radius:7px;cursor:pointer;min-width:42px}
+.fx-control:hover{background:#ffffff2b}
+.fx-scrub{flex:1;min-width:0;accent-color:var(--accent);height:3px}
+.fx-time{font:10px ui-monospace,Menlo,monospace;color:#a9c4b0;min-width:30px;font-variant-numeric:tabular-nums}
+.fx-tile:fullscreen{border-radius:0}.fx-tile:fullscreen .fx-film{object-fit:contain}
+.fx-banner{position:relative;height:104px;margin:0 0 26px;border-radius:12px;overflow:hidden;border:1px solid var(--fx-edge);background:#050a07;-webkit-mask-image:linear-gradient(90deg,#000 55%,transparent);mask-image:linear-gradient(90deg,#000 55%,transparent)}
+.fx-banner .fx-film{opacity:.8}
+.fx-banner-label{position:absolute;left:16px;bottom:10px;font:9px ui-monospace,Menlo,monospace;letter-spacing:2px;color:#a9c4b0}
+
+body[data-motion="off"] .fx-cursor,body[data-motion="off"] .fx-nav-pill{transition:none}
+body[data-motion="off"] .fx-tile:hover .fx-film{transform:none}
+body[data-motion="off"] .workflow-card:hover,body[data-motion="off"] .fx-tile:hover{animation:none}
+body[data-motion="off"] #content>p:only-child{animation:none}
+@media(max-width:900px){.fx-bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:170px}.fx-wide{grid-row:span 1}.fx-reel-head{grid-template-columns:1fr;row-gap:12px}.fx-clock{display:none}}
+@media(max-width:560px){.fx-bento{grid-template-columns:1fr}.fx-tile,.fx-wide{grid-column:auto;grid-row:auto}.fx-controls{opacity:1;transform:none}.fx-top{right:14px}.fx-palette-launch{display:none}}
+@media(hover:none){.fx-controls{opacity:1;transform:none}.fx-cursor{display:none}}
+@media(prefers-reduced-motion:reduce){.fx-cursor{display:none}.fx-top,.fx-controls,.fx-palette[open]{transition:none;animation:none}.workflow-card:hover,.fx-tile:hover{animation:none}}
