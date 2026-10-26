@@ -3,10 +3,10 @@ on: [push, pull_request]
 permissions:
   contents: read
 env:
-  # The Data Core the Workspace is tested against. Its repository is private: set the
-  # CORE_REPOSITORY_TOKEN secret (read access) until the team decides otherwise.
+  # The Data Core the Workspace is tested against (public; CORE_REPOSITORY_TOKEN is only
+  # needed if it becomes private). Pin the v1.0.0 tag at the DC1 handover.
   CORE_REPOSITORY: alekspetrov9e/muniquant-data-core
-  CORE_REF: feature/dc1-b-core-api
+  CORE_REF: main
 jobs:
   test:
     name: Tests and migrations (${{ matrix.database }})

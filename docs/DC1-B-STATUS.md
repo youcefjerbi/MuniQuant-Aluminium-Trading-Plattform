@@ -1,8 +1,9 @@
 # DC1-B status: reconnect the Workspace
 
-Status on 2026-10-21, in the team's report form: Done, Evidence, Blockers, Decisions, Next. Work is on two branches:
-this repository's `feature/dc1-b-reconnect-workspace`, and the Data Core's `feature/dc1-b-core-api`, which builds on
-the DC1-A branch (Core pull request #1). DC1-A's own status is in the Core repository (`docs/DC1-A-STATUS.md`).
+Status on 2026-10-21, in the team's report form: Done, Evidence, Blockers, Decisions, Next. Work is on this
+repository's `feature/dc1-b-reconnect-workspace`. The Data Core's side (`feature/dc1-b-core-api`, Core pull request #2)
+was merged into the Core's `main` on 2026-10-26, after DC1-A (Core pull request #1). DC1-A's own status is in the Core
+repository (`docs/DC1-A-STATUS.md`).
 
 The specification says DC1-B "starts only after every DC1-A step has passed". It started on 2026-10-21 at Aleks's
 request while A8 (the dates note) still awaits review and Core pull request #1 awaits sign-off; nothing in DC1-B
@@ -90,8 +91,8 @@ Each follows the specification as closely as possible.
 11. **The Workspace demo is the Workspace half of the platform demo** (the practice account). The fictional research
     demo stays `python -m app.research_demo`.
 12. **Ports**: the Core keeps 8000; the Workspace uses 8001 next to it.
-13. **The Workspace CI pins the Core branch** `feature/dc1-b-core-api` for now; it should pin the Core's v1.0.0 tag at
-    the handover.
+13. **The Workspace CI tests against the Core's `main`** (DC1-A and the Core side of DC1-B, merged 2026-10-26); it
+    should pin the Core's v1.0.0 tag at the handover.
 
 ## Next
 
