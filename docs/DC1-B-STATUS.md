@@ -1,5 +1,8 @@
 # DC1-B status: reconnect the Workspace
 
+**Signed off.** DC1 was signed off (A and B, including A8 and B6) on 2026-10-26. Core pull
+requests #1 and #2 and this repository's #19 are merged. The report below is the state at review time.
+
 Status on 2026-10-21, in the team's report form: Done, Evidence, Blockers, Decisions, Next. Work is on this
 repository's `feature/dc1-b-reconnect-workspace`. The Data Core's side (`feature/dc1-b-core-api`, Core pull request #2)
 was merged into the Core's `main` on 2026-10-26, after DC1-A (Core pull request #1). DC1-A's own status is in the Core
@@ -11,14 +14,14 @@ depends on the dates note.
 
 ## Done
 
-| Step | State | Done when (specification) |
-|---|---|---|
-| B1 Clean Workspace database | **Done locally**, CI pending | One straight migration creates the Workspace's own tables and no Core table; links to Core tables are plain reference fields. Setup, drift check and round trip pass on SQLite, PostgreSQL 16 and 17 (`tests/test_schema.py`). |
-| B2 Connect them | **Done locally**, CI pending | A small API client (`app/core_client.py`) serves plants, names, documents, facts and candidate facts. Leads, research, investigations, the map and the trader assistant work end to end against a running Core: every Workspace test starts a real Core process with its own database. |
-| B3 Split tool | **Done locally**, CI pending | `python -m tools.split` works on the real pilot and the demo data with a report that matches before and after; Permutable material goes to the Workspace side. |
-| B4 Same results after the split | **Done** | A6 run again on the Core database the split tool produced: same result, all checks pass. |
-| B5 Running together | **Done locally**; CI **blocked** | Docker, setup and the demo restore work for each part alone and both together, and one test runs them together. Both projects green in CI is blocked: the Workspace CI cannot read the private Core repository yet (Blockers). |
-| B6 Docs | Written, **awaiting review and agreement** | README, contract, runbook and data diagram in both repositories, and [a short note on the split](SPLIT.md). |
+| Step                            | State                                                             | Done when (specification)                                                                                                                                                                                                                                                              |
+| ------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1 Clean Workspace database     | **Done locally**, CI pending                                      | One straight migration creates the Workspace's own tables and no Core table; links to Core tables are plain reference fields. Setup, drift check and round trip pass on SQLite, PostgreSQL 16 and 17 (`tests/test_schema.py`).                                                         |
+| B2 Connect them                 | **Done locally**, CI pending                                      | A small API client (`app/core_client.py`) serves plants, names, documents, facts and candidate facts. Leads, research, investigations, the map and the trader assistant work end to end against a running Core: every Workspace test starts a real Core process with its own database. |
+| B3 Split tool                   | **Done locally**, CI pending                                      | `python -m tools.split` works on the real pilot and the demo data with a report that matches before and after; Permutable material goes to the Workspace side.                                                                                                                         |
+| B4 Same results after the split | **Done**                                                          | A6 run again on the Core database the split tool produced: same result, all checks pass.                                                                                                                                                                                               |
+| B5 Running together             | **Done locally**; CI **blocked**                                  | Docker, setup and the demo restore work for each part alone and both together, and one test runs them together. Both projects green in CI is blocked: the Workspace CI cannot read the private Core repository yet (Blockers).                                                         |
+| B6 Docs                         | **Done**: reviewed and agreed with the DC1 sign-off on 2026-10-26 | README, contract, runbook and data diagram in both repositories, and [a short note on the split](SPLIT.md).                                                                                                                                                                            |
 
 ## Evidence
 
