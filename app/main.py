@@ -23,6 +23,15 @@ logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger('muniquant')
 STATIC=Path(__file__).parent/'static'
 
+def bearer(request):
+    """The token of an "Authorization: Bearer <token>" header, or '' for a missing or other header."""
+    scheme,_,token=request.headers.get('authorization','').partition(' ')
+    return token if scheme.lower()=='bearer' else ''
+
+def matches(token,credential):
+    # An empty token or configured key never matches; bytes, so a non-ASCII header is a mismatch rather than an error.
+    return bool(token and credential) and secrets.compare_digest(token.encode(),credential.encode())
+
 def create_app(database_url=None, storage=None, write_token=None, core=None):
     Path('data').mkdir(exist_ok=True)
     app=FastAPI(title='MuniQuant Workspace', version='1.0.0')
@@ -46,12 +55,12 @@ def create_app(database_url=None, storage=None, write_token=None, core=None):
         return app.state.core.cached()
 
     def writer(request:Request):
-        token=request.headers.get('authorization','').removeprefix('Bearer ')
+        token=bearer(request)
         identities=json.loads(os.getenv('WRITE_IDENTITIES_JSON') or '{}')
         for credential,identity in identities.items():
-            if secrets.compare_digest(token,credential):
+            if matches(token,credential):
                 return identity
-        if not app.state.write_token or not secrets.compare_digest(token, app.state.write_token):
+        if not matches(token,app.state.write_token):
             raise HTTPException(401,'Set WRITE_TOKEN on the server and enter it in Workspace access to edit')
         return app.state.actor
 
@@ -67,9 +76,9 @@ def create_app(database_url=None, storage=None, write_token=None, core=None):
     async def request_log(request, call_next):
         start=time.monotonic()
         if app.state.require_read_auth and (request.method=='GET' or request.url.path in ('/api/chat','/api/chat/stream')) and request.url.path.startswith('/api/') and request.url.path!='/api/health':
-            token=request.headers.get('authorization','').removeprefix('Bearer ')
+            token=bearer(request)
             allowed=[app.state.write_token,app.state.read_token,*json.loads(os.getenv('WRITE_IDENTITIES_JSON') or '{}')]
-            if not token or not any(credential and secrets.compare_digest(token,credential) for credential in allowed):
+            if not any(matches(token,credential) for credential in allowed):
                 return JSONResponse({'detail':'Workspace read authorization required'},status_code=401)
         # Guard both declared and streamed bodies before JSON parsing.
         if request.method in ('POST','PUT','PATCH'):
