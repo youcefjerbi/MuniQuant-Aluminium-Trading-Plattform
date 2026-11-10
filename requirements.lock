@@ -3,7 +3,7 @@ alembic==1.20.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
-certifi==2026.7.22
+certifi==2026.10.23
 click==8.5.0
 fastapi==0.142.2
 greenlet==3.5.6
@@ -14,7 +14,7 @@ idna==3.20
 iniconfig==2.3.0
 Mako==1.4.3
 MarkupSafe==3.0.3
-opentelemetry-api==1.45.0
+opentelemetry-api==1.45.2
 packaging==26.3
 pluggy==1.6.0
 psycopg==3.3.6
@@ -23,7 +23,7 @@ pydantic==2.13.5
 pydantic_core==2.46.5
 Pygments==2.21.0
 pytest==9.1.1
-setuptools==84.0.0
+setuptools==84.2.1
 SQLAlchemy==2.0.54
 starlette==1.7.0
 typing-inspection==0.4.4

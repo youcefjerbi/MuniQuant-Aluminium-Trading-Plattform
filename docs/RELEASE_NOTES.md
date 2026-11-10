@@ -21,3 +21,13 @@ Validation: 64 local tests pass; restored demo serves seven entities (six facili
 Adds Permutable AI as a credentialed, lead-only source (ADR 0003). Live and historical Asset events and event headlines for `ALI_COM` are preserved as fingerprinted document versions and parsed by `permutable-leads-1.0.0` into leads with point-in-time revisions, headline links and deterministic asset-name matches. Curators triage leads (follow up, dismiss, confirm with a primary-source document) on the new Event leads screen or via API/CLI. Lead documents cannot be cited as evidence (`LEAD_SOURCE_CITED` BLOCK). Vendor sentiment, impact, signal and forecast fields are not stored. Migration `a7d3e19c5b42` adds credential references and usage scope to source access plus the lead tables. CommodityEvidencePackage 1.0.0 is unchanged.
 
 Validation: 87 tests pass on SQLite and PostgreSQL 16; migration round trip and `alembic check` are clean on both. A live check against the Permutable API captured 500 Asset events and 500 headlines, and replay reproduced every stored lead fact.
+
+## Workspace access tokens — unreleased (2026-11-04)
+
+Tokens must come as `Authorization: Bearer <token>` ("Bearer" in any case), as in the Data Core. An empty key in
+`WRITE_IDENTITIES_JSON` no longer lets a request without a token write, and a non-ASCII token is a refusal (401)
+instead of a server error. The Workspace screens and its Core client already send the prefix.
+
+Dependencies with published advisories: certifi 2026.7.22 → 2026.10.23 (it shipped emSign root certificates whose
+intermediate keys were compromised), opentelemetry-api 1.45.0 → 1.45.2 (unbounded tracestate parsing; pulled in by
+FastAPI) and setuptools 84.0.0 → 84.2.1 (a path escape on Windows when installing legacy wheels).

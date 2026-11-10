@@ -53,6 +53,17 @@ def test_mutations_require_authorization(client):
     assert client.post('/api/research/import-leads').status_code == 401
 
 
+def test_write_access_needs_a_matching_bearer_token(client, monkeypatch):
+    monkeypatch.setenv('WRITE_IDENTITIES_JSON', '{"": "anyone"}')
+    for header in ('', 'Bearer ', 'test-token', 'Token test-token', 'Bearer tést'.encode('latin-1')):
+        assert client.post('/api/research/policy', json={}, headers={'Authorization': header}).status_code == 401, header
+    assert client.post('/api/research/policy', json={}, headers={'Authorization': 'bearer test-token'}).status_code == 200
+    client.app.state.require_read_auth = True
+    assert client.get('/api/research', headers={'Authorization': 'test-token'}).status_code == 401
+    assert client.get('/api/research', headers={'Authorization': 'Bearer tést'.encode('latin-1')}).status_code == 401
+    assert client.get('/api/research', headers={'Authorization': 'Bearer test-token'}).status_code == 200
+
+
 def test_idempotency_and_immutable_events(client):
     client.post('/api/research/policy', json={})
     body = event_body()
