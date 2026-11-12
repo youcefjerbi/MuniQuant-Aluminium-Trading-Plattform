@@ -5,8 +5,10 @@ Batu, and the research track.
 
 On 6 Oct both teams agreed on one event schema, so the research event database can feed the game's event generation
 (CONTEXT §1, "Research link"; open decision 7 in CONTEXT §6). This draft turns the proposal in §6 into a record both
-sides can read and write, and maps the research platform's event kinds to the game's 12 event types. The same file is
-kept in both repositories (`muniquant-finals-sim` and `MuniQuant-Aluminium-Trading-Plattform`); change both together.
+sides can read and write, and maps the research platform's event kinds to the game's 12 event types. This is the
+only copy: it lives in the research platform's repository because both teams can read it here, and the simulator
+repository (`muniquant-finals-sim`) links to it. Change it here, by pull request. The Europe list in the mapping is
+also the `EUROPE` set of the simulator's plant headlines (`sim/plant_headlines.py`); change them together.
 
 ## The record
 
