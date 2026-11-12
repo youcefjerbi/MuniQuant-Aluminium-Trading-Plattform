@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Permutable AI as a licensed lead source: factual events and headlines only.
 
 Scope follows the 12-week plan (p.25) and the Market Data Scope (section 7): only the

@@ -110,3 +110,10 @@ Individual write identities are supported through `WRITE_IDENTITIES_JSON`. Reads
 enable `REQUIRE_READ_AUTH` and configure TLS/private ingress before shared deployment. Raw Permutable responses are
 licensed data: keep the snapshot store private and never commit captures. No licence for redistribution of
 third-party source data is implied by this repository.
+
+## Licence
+
+Apache License 2.0: see [LICENSE](LICENSE) and [NOTICE](NOTICE). Anyone who passes on a copy keeps both files and
+marks the files they changed (section 4 of the licence). Source files start with
+`Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.`; new source files carry the same line.
+`app/static/vendor/` keeps its own licence: Leaflet 1.9.4 is BSD 2-Clause (`LEAFLET-LICENSE` next to it).

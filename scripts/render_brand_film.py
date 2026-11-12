@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Render MuniQuant's original, silent, seamless 12-second aluminium sculpture film.
 Optional authoring dependencies: numpy, Pillow, imageio-ffmpeg (not app dependencies).
 """

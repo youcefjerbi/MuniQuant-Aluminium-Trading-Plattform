@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Read-only trader assistant with bounded retrieval and optional AI synthesis.
 
 Asset records come from the Data Core API; leads, cases and paper records from the Workspace."""

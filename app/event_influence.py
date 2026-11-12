@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Versioned, non-recursive attention scoring; never an execution input."""
 from datetime import datetime, timezone
 from math import exp, floor

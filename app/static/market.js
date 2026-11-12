@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 'use strict';
 const marketSelection={symbol:'NYSE:AA',interval:'D'};
 function marketNumber(value,digits=2){return value===null||value===undefined?'—':Number(value).toLocaleString(undefined,{maximumFractionDigits:digits,minimumFractionDigits:digits})}

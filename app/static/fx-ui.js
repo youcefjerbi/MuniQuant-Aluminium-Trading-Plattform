@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 /* Interaction layer: spring physics, card tilt and spotlight, cursor aura, kinetic typography,
    scroll-scrubbed text, count-up numbers, a gliding nav indicator, click ripples, a command
    palette and a live UTC clock. Honors the motion toggle in motion.js and prefers-reduced-motion. */

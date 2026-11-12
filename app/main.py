@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """MuniQuant Workspace: leads, research and practice trading, investigations and the map.
 
 Plants, companies, sources, documents and facts come from the Data Core through its API

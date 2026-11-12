@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Reconstruct simulated portfolio marks from the immutable local ledger.
 
 TradingView prices are not imported or used to value the paper account.

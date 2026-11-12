@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Workspace records: licensed lead feeds, research, investigations, the map and the old trading screens.
 
 Plants, companies, sources, documents and facts live in the Data Core. A column marked "Core

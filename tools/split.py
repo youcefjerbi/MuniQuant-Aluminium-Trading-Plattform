@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Split an existing MuniQuant platform database into a new Data Core and a new Workspace database.
 
 DC1 step B3. The source is opened read-only and never changed (a SQLite source is fingerprinted

@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Capture of licensed lead feeds into the Workspace's lead store.
 
 Explicit permitted URLs only: public-IP-pinned HTTPS, bounded snapshots and attempt logs.

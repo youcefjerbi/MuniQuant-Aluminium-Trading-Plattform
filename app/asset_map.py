@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Asset map: Workspace locations and dependencies for Data Core plants.
 
 Locations and links store Core plant and document IDs; plant details come from the Core API."""

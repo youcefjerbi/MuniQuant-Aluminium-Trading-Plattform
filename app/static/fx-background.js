@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 /* Living WebGL background: a domain-warped noise field that follows the cursor, drifts with scroll
    and eases its palette between workspace tabs. Decorative only; the page works without it. */
 (()=>{

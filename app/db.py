@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
