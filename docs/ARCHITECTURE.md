@@ -39,6 +39,9 @@ request uses one cached view, so a Core list is read once per request.
   current Core plant names. Replay proves stored lead facts equal the saved responses.
 - **Research and practice trading** (`app/research.py`): event chains over Core plants and the ownership and operator
   links the Core had recorded by the time an event became known; a cash-only paper ledger.
+- **Practice bot** (`app/game_bridge.py`): a command-line client of the championship simulator's participant API. It
+  feeds game headlines and prices to the paper engine under `LME_AL_GAME`, sends its decisions as practice-round
+  orders and learns finished rounds. See [the game bridge guide](GAME_BRIDGE.md).
 - **Investigations** (`app/investigations.py`) and **the map** (`app/asset_map.py`): analyst records that cite Core
   documents and plants.
 - **Trader assistant** (`app/chatbot.py`): bounded retrieval over Workspace records and Core facts.
