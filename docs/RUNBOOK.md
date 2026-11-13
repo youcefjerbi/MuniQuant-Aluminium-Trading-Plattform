@@ -22,6 +22,7 @@ starting the API; migrations never run hidden inside the API. A Data Core must b
 | PERMUTABLE_API_KEY / PERMUTABLE_TICKERS | Licensed Permutable key (only its variable name is stored) and tickers to poll, default `ALI_COM` |
 | LICENSED_CREDENTIALS_JSON | Credential variable names and the only hosts allowed to receive them; default `{"PERMUTABLE_API_KEY": ["copilot-api.permutable.ai"]}` |
 | CHAT_AI_ENABLED / OPENAI_API_KEY / CHAT_MODEL | Optional trader-assistant summaries |
+| GAME_SERVER_URL / GAME_API_KEY / GAME_ROUNDS_DIR | Practice bot only ([GAME_BRIDGE.md](GAME_BRIDGE.md)): game server, practice account key (never stored), saved rounds (default `data/game-rounds`) |
 
 With `compose.together.yaml`, also `CORE_HOME` (Core checkout), `CORE_POSTGRES_PASSWORD` and `CORE_WRITE_TOKEN`; the
 file registers `CORE_TOKEN` in the Core as the identity `workspace`. Use an ignored `.env` for secrets; Compose loads

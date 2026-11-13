@@ -16,6 +16,10 @@ The paper ledger starts with 100,000 simulated cash units, uses decimal arithmet
 
 New live Permutable captures bridge captured event revisions into the research stream. Classification is keyword-based and should be reviewed; the bridge defaults to `ALUMINIUM_DEMO` and does not establish an exchange-instrument mapping. Historical captures and the manual **Import event leads** button import historical records and cannot trigger orders. Capture responses expose bridge failures separately; research failure does not erase an already captured vendor snapshot. Existing imported revision keys are not retroactively traded.
 
+The practice bot (`python -m app.game_bridge`, [GAME_BRIDGE.md](GAME_BRIDGE.md)) feeds the championship game's
+headlines and prices into this engine under the instrument `LME_AL_GAME` and sends its decisions to the game's
+practice rounds. Finished rounds become historical analogues on a synthetic timeline, one game day per 24 hours.
+
 ## Run the fictional end-to-end demonstration
 
 After installing the application using the README's Python guide, use a separate database:

@@ -31,3 +31,13 @@ instead of a server error. The Workspace screens and its Core client already sen
 Dependencies with published advisories: certifi 2026.7.22 → 2026.10.23 (it shipped emSign root certificates whose
 intermediate keys were compromised), opentelemetry-api 1.45.0 → 1.45.2 (unbounded tracestate parsing; pulled in by
 FastAPI) and setuptools 84.0.0 → 84.2.1 (a path escape on Windows when installing legacy wheels).
+
+## Practice bot on the championship game — unreleased (2026-11-13)
+
+`python -m app.game_bridge` lets the paper engine trade the championship simulator's practice rounds through the
+game's participant API ([GAME_BRIDGE.md](GAME_BRIDGE.md)). Game headlines become live research events and game prices
+become quotes, all under the research instrument `LME_AL_GAME`. Game types map to research kinds as the shared event
+format says. BUY and SELL decisions go to the game as market orders whose `request_id` is the decision ID, and each
+order is audited as `game_order`. Finished rounds are saved under the git-ignored `data/game-rounds/` and learned as
+labelled history (one game day per 24 hours), so the next round has analogues. Off unless started; it refuses servers
+that name a final; the API key is never stored. No migration and no new dependency.
