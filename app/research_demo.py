@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Create fictional historical chains and execute one automatic paper decision.
 
 Run only in a separate migrated demonstration database: python -m app.research_demo

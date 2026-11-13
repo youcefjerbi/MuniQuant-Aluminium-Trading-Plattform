@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
-COPY requirements.lock pyproject.toml ./
+COPY requirements.lock pyproject.toml LICENSE NOTICE ./
 COPY app ./app
 RUN pip install --no-cache-dir -r requirements.lock && pip install --no-cache-dir --no-deps . && useradd -m appuser
 COPY migrations ./migrations

@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Restore the bundled Workspace demo (SQLite) without overwriting existing data.
 
 The Workspace half of the platform's fictional demo, made by tools/split.py. Its plants and documents

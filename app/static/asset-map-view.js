@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 'use strict';
 const map=L.map('geography',{worldCopyJump:true}).setView([23,10],2);
 let countryLayer=null;

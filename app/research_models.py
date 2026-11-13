@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Separate experimental research and paper ledger; never exported as evidence."""
 from sqlalchemy import Column, String, Integer, Text, ForeignKey, JSON, CheckConstraint
 from .models import Base, uid, now
