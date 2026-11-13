@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 /* Cinematic motion is optional; all content and navigation work without it. */
 (()=>{
   'use strict';

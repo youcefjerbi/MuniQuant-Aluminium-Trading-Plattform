@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 /* Apply the preference before styles load to avoid a theme flash. */
 (()=>{
   const key='muniquant-theme',system=window.matchMedia('(prefers-color-scheme: dark)');

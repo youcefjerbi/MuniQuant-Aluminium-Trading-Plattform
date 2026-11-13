@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Analyst-led cases independent of API event ingestion and trading.
 
 Affected assets and evidence documents are Data Core records: a case stores their Core IDs (a

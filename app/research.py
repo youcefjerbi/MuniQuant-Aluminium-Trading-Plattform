@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Experimental, deterministic event chains and a cash-only paper broker.
 
 No broker SDK, live orders, external LLM, or assertion of predictive validity. Plants and the

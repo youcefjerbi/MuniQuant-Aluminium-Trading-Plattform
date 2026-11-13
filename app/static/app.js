@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 'use strict';
 let data, token='', page='overview', leadFilter={status:'new',matched:'',topic:'',search:''}, polling=false;
 const $=s=>document.querySelector(s);

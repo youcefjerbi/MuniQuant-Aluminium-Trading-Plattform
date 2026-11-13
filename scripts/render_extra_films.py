@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Render two original, silent, seamless 10-second loops for the workspace pages.
 
 Optional authoring dependencies: numpy, Pillow, imageio-ffmpeg (not app dependencies).

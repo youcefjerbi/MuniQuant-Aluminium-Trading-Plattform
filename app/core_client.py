@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Small client for the Data Core API: plants, names, documents, facts and candidate facts.
 
 The Workspace reads and writes Core data only through this client. It stores Core IDs, never copies,

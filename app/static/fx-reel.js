@@ -1,3 +1,4 @@
+// Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 /* Video reel for the overview (bento grid with custom controls) and an ambient film banner under
    every other tab title. All films are original, silent, locally served loops. */
 (()=>{

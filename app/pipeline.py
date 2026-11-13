@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 """Content fingerprints and verified reads of preserved lead-feed responses."""
 import hashlib
 import json

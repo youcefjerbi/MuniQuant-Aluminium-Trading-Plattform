@@ -1,3 +1,4 @@
+# Copyright 2026 muniQuant. Licensed under the Apache License, Version 2.0.
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
