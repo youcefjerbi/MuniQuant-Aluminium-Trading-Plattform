@@ -94,12 +94,12 @@ Each follows the specification as closely as possible.
 11. **The Workspace demo is the Workspace half of the platform demo** (the practice account). The fictional research
     demo stays `python -m app.research_demo`.
 12. **Ports**: the Core keeps 8000; the Workspace uses 8001 next to it.
-13. **The Workspace CI tests against the Core's `main`** (DC1-A and the Core side of DC1-B, merged 2026-10-26); it
-    should pin the Core's v1.0.0 tag at the handover.
+13. **The Workspace CI tests against the Core's `v1.0.0` tag**, the DC1 handover release (2026-11-14). Until then it
+    tested against the Core's `main`.
 
 ## Next
 
 - Decide the CI access to the Core repository (Blockers), then push this branch and open the pull request.
 - Review: A8, B6 and the three pull requests. Merge order: Core #1 (DC1-A), the Core's DC1-B branch, then this one.
-- Tag the Core v1.0.0, pin the Workspace CI to it, and hand over the split reports, the A6 and B4 comparisons and a
-  private copy of the pilot baseline with the Core's frozen pilot export.
+- Done 2026-11-14: the Core is tagged `v1.0.0` and the Workspace CI is pinned to it. Still to do: hand over the split
+  reports, the A6 and B4 comparisons and a private copy of the pilot baseline with the Core's frozen pilot export.
