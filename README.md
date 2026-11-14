@@ -25,10 +25,8 @@ how the Workspace uses the Core is in [the contract note](docs/CONTRACT.md).
   projection; SQLite uses offline TF-IDF. See [scalable event storage](docs/SCALABLE_EVENT_STORAGE.md).
 - **Patterns & paper trades**: experimental event chains over Core plants and their ownership links, historical
   analogues and a cash-only paper account with automatic BUY/SELL/HOLD decisions. No broker, no real money. See
-  [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md).
-- **Practice bot on the championship game** (`python -m app.game_bridge`): the paper engine trades the simulator's
-  practice rounds through the game's participant API, under the research instrument `LME_AL_GAME`, and learns each
-  finished round. Off unless started; never on finals. See [the game bridge guide](docs/GAME_BRIDGE.md).
+  [the extension guide](docs/EVENT_CHAIN_PAPER_ENGINE.md). Events are exchanged with the Munich Quant Championship's
+  market simulator in [the shared event format](docs/EVENT_SCHEMA.md) (draft).
 - **Investigations**: analyst-led cases with evidence from Core documents, hypotheses, contradictions, tasks and a
   revision history. See [the investigation guide](docs/INVESTIGATIONS.md).
 - **Asset map**: locations and dependencies of Core plants, each with a Core source document. See [the map guide](docs/ASSET_MAP.md).
