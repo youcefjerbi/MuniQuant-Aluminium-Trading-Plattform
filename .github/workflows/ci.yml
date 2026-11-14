@@ -4,9 +4,10 @@ permissions:
   contents: read
 env:
   # The Data Core the Workspace is tested against (public; CORE_REPOSITORY_TOKEN is only
-  # needed if it becomes private). Pin the v1.0.0 tag at the DC1 handover.
+  # needed if it becomes private). Pinned to the Core release the Workspace is built for (the DC1
+  # handover); move the pin with each Core release.
   CORE_REPOSITORY: alekspetrov9e/muniquant-data-core
-  CORE_REF: main
+  CORE_REF: v1.0.0
 jobs:
   test:
     name: Tests and migrations (${{ matrix.database }})
